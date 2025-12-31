@@ -93,6 +93,25 @@ export default function EnergyAudits() {
               </ul>
             </div>
 
+            <div className="bg-secondary p-8 rounded-sm border border-border shadow-md">
+              <h3 className="font-heading font-bold text-2xl mb-6 text-primary">¿QUÉ OBTIENE TU EMPRESA?</h3>
+              <p className="mb-4 text-muted-foreground text-sm">Al finalizar la auditoría energética, tu empresa obtiene información clara y accionable para la toma de decisiones técnicas y financieras.</p>
+              <ul className="space-y-4">
+                {[
+                  "Diagnóstico del consumo energético actual",
+                  "Identificación de ineficiencias y pérdidas",
+                  "Recomendaciones técnicas priorizadas",
+                  "Propuestas de mejora enfocadas en ahorro energético",
+                  "Base técnica para proyectos de eficiencia energética"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                    <span className="text-sm text-foreground">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <div className="bg-card shadow-lg border border-border p-8 rounded-sm sticky top-24">
               <h3 className="font-heading font-bold text-2xl mb-4">Inicie su Auditoría</h3>
               <p className="text-muted-foreground mb-6">Deje de pagar por energía que no utiliza. Contáctenos para programar una evaluación preliminar.</p>
