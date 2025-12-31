@@ -24,10 +24,10 @@ export default function About() {
             
             <div className="prose prose-lg text-muted-foreground mb-12">
                 <p>
-                    Avantrik es una empresa de ingeniería que ofrece soluciones técnicas a clientes industriales, comerciales y corporativos. No atendemos mercados residenciales porque nuestra experiencia está diseñada para la complejidad y escala de entornos empresariales de alta demanda.
+                    Avantrik es una empresa de ingeniería que ofrece soluciones técnicas a clientes residenciales, industriales, comerciales y corporativos. Nuestra experiencia está diseñada para adaptarse a la complejidad y escala de cualquier entorno, garantizando siempre los más altos estándares de calidad.
                 </p>
                 <p>
-                    Nuestro enfoque es profundamente técnico. Creemos que la verdadera eficiencia proviene de una comprensión rigurosa de la física, la termodinámica y los sistemas eléctricos, no solo de la instalación de equipos nuevos. Analizamos, planificamos y ejecutamos con precisión.
+                    Nuestro enfoque es profundamente técnico. Creemos que la verdadera eficiencia proviene de una comprensión rigurosa de la física, la termodinámica y los sistemas eléctricos, no solo de la instalación de equipos nuevos. Analizamos, planificamos y ejecutamos con precisión en cada proyecto.
                 </p>
             </div>
 

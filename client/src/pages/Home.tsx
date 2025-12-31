@@ -103,7 +103,7 @@ export default function Home() {
               Soluciones Especializadas de Ingeniería
             </h3>
             <p className="text-muted-foreground">
-              Nos enfocamos exclusivamente en entornos empresariales e industriales, entregando soluciones a medida que impulsan el rendimiento.
+              Brindamos servicios integrales para entornos residenciales, comerciales e industriales, entregando soluciones a medida que impulsan el rendimiento.
             </p>
           </div>
 

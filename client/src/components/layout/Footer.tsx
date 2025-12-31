@@ -21,7 +21,7 @@ export function Footer() {
               </span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
-              Excelencia en ingeniería para la eficiencia industrial. Proporcionamos soluciones técnicas avanzadas para sistemas HVAC, Eléctricos y Geotérmicos.
+              Excelencia en ingeniería para la eficiencia. Proporcionamos soluciones técnicas avanzadas para sistemas residenciales e industriales en HVAC, Electricidad y Geotermia.
             </p>
           </div>
 
@@ -30,7 +30,7 @@ export function Footer() {
             <h3 className="font-heading font-bold text-lg mb-6 text-white">Servicios</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
               <li><Link href="/services/energy-audits"><a className="hover:text-accent transition-colors">Auditorías Energéticas</a></Link></li>
-              <li><Link href="/services/industrial-hvac"><a className="hover:text-accent transition-colors">HVAC Industrial</a></Link></li>
+              <li><Link href="/services/industrial-hvac"><a className="hover:text-accent transition-colors">HVAC</a></Link></li>
               <li><Link href="/services/electrical-engineering"><a className="hover:text-accent transition-colors">Ingeniería Eléctrica</a></Link></li>
               <li><Link href="/services/geothermal-systems"><a className="hover:text-accent transition-colors">Sistemas Geotérmicos</a></Link></li>
             </ul>
@@ -55,7 +55,7 @@ export function Footer() {
                 <Phone className="w-5 h-5 text-accent shrink-0" />
                 <div className="flex flex-col">
                   <span>(+52) 442-219-6915</span>
-                  <span>(+52) 442-739-4819</span>
+                  <span>(+52) 614-105-9868</span>
                 </div>
               </li>
               <li className="flex items-center gap-3">
