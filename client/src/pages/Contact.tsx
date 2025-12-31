@@ -7,9 +7,9 @@ export default function Contact() {
     <Layout>
       <div className="bg-secondary/30 py-16">
         <div className="container mx-auto px-4 text-center">
-           <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4">Contact Us</h1>
+           <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4">Contacto</h1>
            <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-             Ready to optimize your facility? Get in touch with our engineering team for a consultation or quote.
+             ¿Listo para optimizar su instalación? Póngase en contacto con nuestro equipo de ingeniería para una consulta o cotización.
            </p>
         </div>
       </div>
@@ -20,9 +20,9 @@ export default function Contact() {
           {/* Contact Info Side */}
           <div className="space-y-8">
             <div>
-              <h2 className="text-2xl font-heading font-bold mb-6">Get in Touch</h2>
+              <h2 className="text-2xl font-heading font-bold mb-6">Ponte en Contacto</h2>
               <p className="text-muted-foreground mb-8">
-                Fill out the form to request an audit, a quote, or general information. We typically respond within one business day.
+                Complete el formulario para solicitar una auditoría, una cotización o información general. Normalmente respondemos en un día hábil.
               </p>
             </div>
 
@@ -32,10 +32,10 @@ export default function Contact() {
                   <MapPin className="w-6 h-6 text-accent" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-foreground">Headquarters</h3>
+                  <h3 className="font-bold text-foreground">Sede Central</h3>
                   <p className="text-muted-foreground">
-                    123 Industrial Park Dr.<br />
-                    Sector 4, Tech City, ST 90210
+                    Parque Industrial 123.<br />
+                    Sector 4, Ciudad Tecnológica, CP 90210
                   </p>
                 </div>
               </div>
@@ -45,9 +45,9 @@ export default function Contact() {
                   <Phone className="w-6 h-6 text-accent" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-foreground">Phone</h3>
-                  <p className="text-muted-foreground">+1 (555) 123-4567</p>
-                  <p className="text-xs text-muted-foreground mt-1">Mon-Fri, 8am - 6pm EST</p>
+                  <h3 className="font-bold text-foreground">Teléfono</h3>
+                  <p className="text-muted-foreground">+52 (555) 123-4567</p>
+                  <p className="text-xs text-muted-foreground mt-1">Lun-Vie, 8am - 6pm CST</p>
                 </div>
               </div>
 
@@ -56,26 +56,26 @@ export default function Contact() {
                   <Mail className="w-6 h-6 text-accent" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-foreground">Email</h3>
-                  <p className="text-muted-foreground">solutions@avantrik.com</p>
-                  <p className="text-muted-foreground">support@avantrik.com</p>
+                  <h3 className="font-bold text-foreground">Correo</h3>
+                  <p className="text-muted-foreground">soluciones@avantrik.com</p>
+                  <p className="text-muted-foreground">soporte@avantrik.com</p>
                 </div>
               </div>
             </div>
 
             <div className="bg-primary text-primary-foreground p-8 rounded-sm mt-8">
                 <h3 className="font-heading font-bold text-xl mb-2 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-accent" /> Emergency Service
+                    <Clock className="w-5 h-5 text-accent" /> Servicio de Emergencia
                 </h3>
                 <p className="text-primary-foreground/80 text-sm">
-                    For critical system failures, our support team is available 24/7 for contract clients. Please call the dedicated emergency line provided in your service agreement.
+                    Para fallas críticas del sistema, nuestro equipo de soporte está disponible 24/7 para clientes con contrato. Por favor, llame a la línea de emergencia dedicada proporcionada en su acuerdo de servicio.
                 </p>
             </div>
           </div>
 
           {/* Form Side */}
           <div className="bg-card border border-border p-8 rounded-sm shadow-lg">
-            <h2 className="text-2xl font-heading font-bold mb-6">Send a Message</h2>
+            <h2 className="text-2xl font-heading font-bold mb-6">Enviar Mensaje</h2>
             <ContactForm />
           </div>
 

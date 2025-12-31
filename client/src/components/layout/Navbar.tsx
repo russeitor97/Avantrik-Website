@@ -20,13 +20,13 @@ export function Navbar() {
   }, []);
 
   const navLinks = [
-    { name: "Home", href: "/" },
-    { name: "About", href: "/about" },
-    { name: "Energy Audits", href: "/services/energy-audits" },
-    { name: "Industrial HVAC", href: "/services/industrial-hvac" },
-    { name: "Electrical", href: "/services/electrical-engineering" },
-    { name: "Geothermal", href: "/services/geothermal-systems" },
-    { name: "Contact", href: "/contact" },
+    { name: "Inicio", href: "/" },
+    { name: "Nosotros", href: "/about" },
+    { name: "Auditorías", href: "/services/energy-audits" },
+    { name: "HVAC Industrial", href: "/services/industrial-hvac" },
+    { name: "Ing. Eléctrica", href: "/services/electrical-engineering" },
+    { name: "Geotermia", href: "/services/geothermal-systems" },
+    { name: "Contacto", href: "/contact" },
   ];
 
   return (
@@ -51,7 +51,7 @@ export function Navbar() {
                 AVANTRIK
               </span>
               <span className="text-[10px] tracking-widest uppercase text-muted-foreground font-medium">
-                Engineering Solutions
+                Soluciones de Ingeniería
               </span>
             </div>
           </a>
@@ -77,7 +77,7 @@ export function Navbar() {
           ))}
           <Link href="/contact">
             <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wider rounded-sm">
-              Get Quote
+              Cotizar
             </Button>
           </Link>
         </div>

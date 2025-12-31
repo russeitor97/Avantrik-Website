@@ -42,8 +42,8 @@ export function ServiceCard({ title, description, icon: Icon, href, image, class
           </CardContent>
           
           <CardFooter className="pb-6 pt-0">
-            <span className="text-sm font-bold text-primary flex items-center group-hover:text-accent transition-colors">
-              LEARN MORE <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
+            <span className="text-sm font-bold text-primary flex items-center group-hover:text-accent transition-colors uppercase">
+              MÁS INFORMACIÓN <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
             </span>
           </CardFooter>
         </Card>

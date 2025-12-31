@@ -21,55 +21,55 @@ export function Footer() {
               </span>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
-              Engineering excellence for industrial efficiency. We provide advanced technical solutions for HVAC, Electrical, and Geothermal systems.
+              Excelencia en ingeniería para la eficiencia industrial. Proporcionamos soluciones técnicas avanzadas para sistemas HVAC, Eléctricos y Geotérmicos.
             </p>
           </div>
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-heading font-bold text-lg mb-6 text-white">Services</h3>
+            <h3 className="font-heading font-bold text-lg mb-6 text-white">Servicios</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/services/energy-audits"><a className="hover:text-accent transition-colors">Energy Audits</a></Link></li>
-              <li><Link href="/services/industrial-hvac"><a className="hover:text-accent transition-colors">Industrial HVAC</a></Link></li>
-              <li><Link href="/services/electrical-engineering"><a className="hover:text-accent transition-colors">Electrical Engineering</a></Link></li>
-              <li><Link href="/services/geothermal-systems"><a className="hover:text-accent transition-colors">Geothermal Systems</a></Link></li>
+              <li><Link href="/services/energy-audits"><a className="hover:text-accent transition-colors">Auditorías Energéticas</a></Link></li>
+              <li><Link href="/services/industrial-hvac"><a className="hover:text-accent transition-colors">HVAC Industrial</a></Link></li>
+              <li><Link href="/services/electrical-engineering"><a className="hover:text-accent transition-colors">Ingeniería Eléctrica</a></Link></li>
+              <li><Link href="/services/geothermal-systems"><a className="hover:text-accent transition-colors">Sistemas Geotérmicos</a></Link></li>
             </ul>
           </div>
 
           {/* Company */}
           <div>
-            <h3 className="font-heading font-bold text-lg mb-6 text-white">Company</h3>
+            <h3 className="font-heading font-bold text-lg mb-6 text-white">Compañía</h3>
             <ul className="space-y-3 text-sm text-muted-foreground">
-              <li><Link href="/"><a className="hover:text-accent transition-colors">Home</a></Link></li>
-              <li><Link href="/about"><a className="hover:text-accent transition-colors">About Us</a></Link></li>
-              <li><Link href="/contact"><a className="hover:text-accent transition-colors">Contact</a></Link></li>
-              <li><a href="#" className="hover:text-accent transition-colors">Privacy Policy</a></li>
+              <li><Link href="/"><a className="hover:text-accent transition-colors">Inicio</a></Link></li>
+              <li><Link href="/about"><a className="hover:text-accent transition-colors">Nosotros</a></Link></li>
+              <li><Link href="/contact"><a className="hover:text-accent transition-colors">Contacto</a></Link></li>
+              <li><a href="#" className="hover:text-accent transition-colors">Aviso de Privacidad</a></li>
             </ul>
           </div>
 
           {/* Contact */}
           <div>
-            <h3 className="font-heading font-bold text-lg mb-6 text-white">Contact Us</h3>
+            <h3 className="font-heading font-bold text-lg mb-6 text-white">Contacto</h3>
             <ul className="space-y-4 text-sm text-muted-foreground">
               <li className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-accent shrink-0" />
-                <span>123 Industrial Park Dr.<br />Sector 4, Tech City</span>
+                <span>Parque Industrial 123.<br />Sector 4, Ciudad Tecnológica</span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-accent shrink-0" />
-                <span>+1 (555) 123-4567</span>
+                <span>+52 (555) 123-4567</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-accent shrink-0" />
-                <span>solutions@avantrik.com</span>
+                <span>soluciones@avantrik.com</span>
               </li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-primary-foreground/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} Avantrik Engineering. All rights reserved.</p>
-          <p>Designed for Performance.</p>
+          <p>&copy; {new Date().getFullYear()} Avantrik Engineering. Todos los derechos reservados.</p>
+          <p>Diseñado para el Rendimiento.</p>
         </div>
       </div>
     </footer>

@@ -9,12 +9,12 @@ import { useToast } from "@/hooks/use-toast";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = z.object({
-  name: z.string().min(2, "Name is required"),
-  company: z.string().min(2, "Company name is required"),
-  email: z.string().email("Invalid email address"),
-  phone: z.string().min(10, "Valid phone number is required"),
-  service: z.string().min(1, "Please select a service"),
-  message: z.string().min(10, "Please provide more details about your project"),
+  name: z.string().min(2, "El nombre es obligatorio"),
+  company: z.string().min(2, "El nombre de la empresa es obligatorio"),
+  email: z.string().email("Correo electrónico inválido"),
+  phone: z.string().min(10, "Se requiere un número de teléfono válido"),
+  service: z.string().min(1, "Por favor seleccione un servicio"),
+  message: z.string().min(10, "Por favor proporcione más detalles sobre su proyecto"),
 });
 
 export function ContactForm() {
@@ -34,8 +34,8 @@ export function ContactForm() {
   function onSubmit(values: z.infer<typeof formSchema>) {
     console.log(values);
     toast({
-      title: "Request Sent",
-      description: "Thank you for contacting Avantrik. We will respond within 24 hours.",
+      title: "Solicitud Enviada",
+      description: "Gracias por contactar a Avantrik. Responderemos en menos de 24 horas.",
     });
     form.reset();
   }
@@ -49,9 +49,9 @@ export function ContactForm() {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground/80">Full Name</FormLabel>
+                <FormLabel className="text-foreground/80">Nombre Completo</FormLabel>
                 <FormControl>
-                  <Input placeholder="John Doe" {...field} className="bg-background border-input" />
+                  <Input placeholder="Juan Pérez" {...field} className="bg-background border-input" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -62,9 +62,9 @@ export function ContactForm() {
             name="company"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground/80">Company Name</FormLabel>
+                <FormLabel className="text-foreground/80">Nombre de la Empresa</FormLabel>
                 <FormControl>
-                  <Input placeholder="Industrial Corp Ltd." {...field} className="bg-background border-input" />
+                  <Input placeholder="Industrias S.A. de C.V." {...field} className="bg-background border-input" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -78,9 +78,9 @@ export function ContactForm() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground/80">Work Email</FormLabel>
+                <FormLabel className="text-foreground/80">Correo de Trabajo</FormLabel>
                 <FormControl>
-                  <Input placeholder="john@company.com" {...field} className="bg-background border-input" />
+                  <Input placeholder="juan@empresa.com" {...field} className="bg-background border-input" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -91,9 +91,9 @@ export function ContactForm() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-foreground/80">Phone Number</FormLabel>
+                <FormLabel className="text-foreground/80">Número de Teléfono</FormLabel>
                 <FormControl>
-                  <Input placeholder="+1 (555) 000-0000" {...field} className="bg-background border-input" />
+                  <Input placeholder="+52 (55) 0000-0000" {...field} className="bg-background border-input" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -106,19 +106,19 @@ export function ContactForm() {
           name="service"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-foreground/80">Service Interest</FormLabel>
+              <FormLabel className="text-foreground/80">Servicio de Interés</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger className="bg-background border-input">
-                    <SelectValue placeholder="Select a service" />
+                    <SelectValue placeholder="Seleccione un servicio" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="energy-audit">Energy Audit</SelectItem>
-                  <SelectItem value="industrial-hvac">Industrial HVAC</SelectItem>
-                  <SelectItem value="electrical">Electrical Engineering</SelectItem>
-                  <SelectItem value="geothermal">Geothermal Systems</SelectItem>
-                  <SelectItem value="consulting">General Consulting</SelectItem>
+                  <SelectItem value="energy-audit">Auditoría Energética</SelectItem>
+                  <SelectItem value="industrial-hvac">HVAC Industrial</SelectItem>
+                  <SelectItem value="electrical">Ingeniería Eléctrica</SelectItem>
+                  <SelectItem value="geothermal">Sistemas Geotérmicos</SelectItem>
+                  <SelectItem value="consulting">Consultoría General</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -131,10 +131,10 @@ export function ContactForm() {
           name="message"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-foreground/80">Project Details</FormLabel>
+              <FormLabel className="text-foreground/80">Detalles del Proyecto</FormLabel>
               <FormControl>
                 <Textarea 
-                  placeholder="Describe your project requirements or specific challenges..." 
+                  placeholder="Describa los requisitos de su proyecto o retos específicos..." 
                   className="min-h-[120px] bg-background border-input resize-none" 
                   {...field} 
                 />
@@ -145,7 +145,7 @@ export function ContactForm() {
         />
 
         <Button type="submit" size="lg" className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-bold uppercase tracking-wide">
-          Submit Request
+          Enviar Solicitud
         </Button>
       </form>
     </Form>

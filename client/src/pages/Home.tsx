@@ -14,29 +14,29 @@ import geothermalImage from "@assets/generated_images/industrial_geothermal_syst
 export default function Home() {
   const services = [
     {
-      title: "Energy Audits",
-      description: "Comprehensive analysis of your facility's energy consumption with data-driven optimization strategies.",
+      title: "Auditorías Energéticas",
+      description: "Análisis exhaustivo del consumo energético de su instalación con estrategias de optimización basadas en datos.",
       icon: Activity,
       href: "/services/energy-audits",
       image: energyImage
     },
     {
-      title: "Industrial HVAC",
-      description: "High-performance climate control systems designed for complex industrial environments and manufacturing plants.",
+      title: "HVAC Industrial",
+      description: "Sistemas de control climático de alto rendimiento diseñados para entornos industriales complejos y plantas de fabricación.",
       icon: Wind,
       href: "/services/industrial-hvac",
       image: hvacImage
     },
     {
-      title: "Electrical Engineering",
-      description: "Advanced low and medium voltage electrical infrastructure planning, installation, and modernization.",
+      title: "Ingeniería Eléctrica",
+      description: "Planeación, instalación y modernización de infraestructura eléctrica avanzada de baja y media tensión.",
       icon: Zap,
       href: "/services/electrical-engineering",
       image: electricalImage
     },
     {
-      title: "Geothermal Systems",
-      description: "Sustainable heating and cooling solutions harnessing underground thermal energy for long-term efficiency.",
+      title: "Sistemas Geotérmicos",
+      description: "Soluciones de calefacción y refrigeración sostenibles que aprovechan la energía térmica subterránea para una eficiencia a largo plazo.",
       icon: Cpu, // Using Cpu as a placeholder for complex tech/system
       href: "/services/geothermal-systems",
       image: geothermalImage
@@ -47,10 +47,11 @@ export default function Home() {
     <Layout>
       <HeroSection 
         image={heroImage}
-        title="ENGINEERING THE FUTURE OF INDUSTRY"
-        subtitle="Avantrik delivers high-precision technical solutions for industrial infrastructure, energy efficiency, and systems optimization."
-        ctaText="Request an Audit"
+        title="INGENIERÍA PARA EL FUTURO DE LA INDUSTRIA"
+        subtitle="Avantrik ofrece soluciones técnicas de alta precisión para infraestructura industrial, eficiencia energética y optimización de sistemas."
+        ctaText="Solicitar Auditoría"
         ctaLink="/contact"
+        secondaryCtaText="Contáctanos"
       />
 
       {/* Intro Section */}
@@ -58,15 +59,15 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="w-full md:w-1/2">
-              <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Who We Are</h2>
+              <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Quiénes Somos</h2>
               <h3 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6">
-                Technical Precision for<br/>Complex Environments
+                Precisión Técnica para<br/>Entornos Complejos
               </h3>
               <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-                Avantrik is an engineering firm dedicated to optimizing industrial and commercial infrastructure. We don't just fix systems; we re-engineer them for maximum efficiency and reliability.
+                Avantrik es una firma de ingeniería dedicada a optimizar la infraestructura industrial y comercial. No solo reparamos sistemas; los re-ingeniamos para lograr la máxima eficiencia y fiabilidad.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
-                {["Operational Cost Reduction", "System Optimization", "Energy Efficiency", "Applied Engineering"].map((item) => (
+                {["Reducción de Costos Operativos", "Optimización de Sistemas", "Eficiencia Energética", "Ingeniería Aplicada"].map((item) => (
                   <div key={item} className="flex items-center gap-2">
                     <CheckCircle className="w-5 h-5 text-accent" />
                     <span className="font-medium text-foreground">{item}</span>
@@ -75,7 +76,7 @@ export default function Home() {
               </div>
               <Link href="/about">
                 <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide">
-                  More About Us
+                  Más Sobre Nosotros
                 </Button>
               </Link>
             </div>
@@ -85,7 +86,7 @@ export default function Home() {
                 <div className="absolute inset-0 flex items-center justify-center">
                     <div className="text-center p-8 bg-background/80 backdrop-blur-sm border border-border shadow-lg rounded-sm max-w-xs">
                         <div className="text-5xl font-heading font-bold text-accent mb-2">35%</div>
-                        <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Average Energy Savings for Clients</div>
+                        <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Ahorro Energético Promedio para Clientes</div>
                     </div>
                 </div>
             </div>
@@ -97,12 +98,12 @@ export default function Home() {
       <section className="py-20 bg-secondary/50 border-y border-border">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Our Expertise</h2>
+            <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Nuestra Experiencia</h2>
             <h3 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-4">
-              Specialized Engineering Solutions
+              Soluciones Especializadas de Ingeniería
             </h3>
             <p className="text-muted-foreground">
-              We focus exclusively on business and industrial environments, delivering tailored solutions that drive performance.
+              Nos enfocamos exclusivamente en entornos empresariales e industriales, entregando soluciones a medida que impulsan el rendimiento.
             </p>
           </div>
 
@@ -118,18 +119,18 @@ export default function Home() {
       <section className="py-24 bg-primary text-primary-foreground relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
         <div className="container mx-auto px-4 relative z-10 text-center">
-          <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">Ready to Optimize Your Infrastructure?</h2>
+          <h2 className="text-3xl md:text-5xl font-heading font-bold mb-6">¿Listo para Optimizar su Infraestructura?</h2>
           <p className="text-xl text-primary-foreground/80 max-w-2xl mx-auto mb-10">
-            Schedule a consultation with our engineering team to identify efficiency gaps and modernization opportunities.
+            Programe una consulta con nuestro equipo de ingeniería para identificar brechas de eficiencia y oportunidades de modernización.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/contact">
               <Button size="lg" className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold h-14 px-8 uppercase tracking-wide">
-                Start a Project
+                Iniciar un Proyecto
               </Button>
             </Link>
             <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 font-bold h-14 px-8 uppercase tracking-wide">
-              Contact Sales
+              Contactar Ventas
             </Button>
           </div>
         </div>

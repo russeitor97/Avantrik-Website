@@ -10,42 +10,42 @@ export default function About() {
           <div className="absolute inset-0 bg-primary/90 mix-blend-multiply" />
         </div>
         <div className="container mx-auto px-4 relative z-10 pt-20 text-center">
-            <h1 className="text-4xl md:text-5xl font-heading font-bold text-white mb-4">About Avantrik</h1>
-            <p className="text-xl text-gray-200 max-w-2xl mx-auto">Engineering Excellence Since 2005</p>
+            <h1 className="text-4xl md:text-5xl font-heading font-bold text-white mb-4">Sobre Avantrik</h1>
+            <p className="text-xl text-gray-200 max-w-2xl mx-auto">Excelencia en Ingeniería desde 2005</p>
         </div>
       </div>
 
       <section className="py-20 container mx-auto px-4">
         <div className="max-w-4xl mx-auto">
-            <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Our Mission</h2>
+            <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Nuestra Misión</h2>
             <h3 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-8">
-                To empower industries with efficient, sustainable, and resilient technical infrastructure.
+                Empoderar a las industrias con infraestructura técnica eficiente, sostenible y resiliente.
             </h3>
             
             <div className="prose prose-lg text-muted-foreground mb-12">
                 <p>
-                    Avantrik is an engineering company that provides technical solutions to industrial, commercial, and corporate clients. We do not serve residential markets because our expertise is tailored to the complexity and scale of high-demand business environments.
+                    Avantrik es una empresa de ingeniería que ofrece soluciones técnicas a clientes industriales, comerciales y corporativos. No atendemos mercados residenciales porque nuestra experiencia está diseñada para la complejidad y escala de entornos empresariales de alta demanda.
                 </p>
                 <p>
-                    Our approach is deeply technical. We believe that true efficiency comes from a rigorous understanding of physics, thermodynamics, and electrical systems—not just from installing new equipment. We analyze, we plan, and we execute with precision.
+                    Nuestro enfoque es profundamente técnico. Creemos que la verdadera eficiencia proviene de una comprensión rigurosa de la física, la termodinámica y los sistemas eléctricos, no solo de la instalación de equipos nuevos. Analizamos, planificamos y ejecutamos con precisión.
                 </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
                 <div className="text-center p-6 border border-border rounded-sm bg-secondary/20">
                     <Users className="w-12 h-12 text-accent mx-auto mb-4" />
-                    <h4 className="font-heading font-bold text-xl mb-2">Expert Team</h4>
-                    <p className="text-sm">Certified engineers across mechanical, electrical, and energy disciplines.</p>
+                    <h4 className="font-heading font-bold text-xl mb-2">Equipo Experto</h4>
+                    <p className="text-sm">Ingenieros certificados en disciplinas mecánicas, eléctricas y energéticas.</p>
                 </div>
                 <div className="text-center p-6 border border-border rounded-sm bg-secondary/20">
                     <Award className="w-12 h-12 text-accent mx-auto mb-4" />
-                    <h4 className="font-heading font-bold text-xl mb-2">Quality First</h4>
-                    <p className="text-sm">ISO 9001 certified processes ensuring consistent, high-standard delivery.</p>
+                    <h4 className="font-heading font-bold text-xl mb-2">Calidad Primero</h4>
+                    <p className="text-sm">Procesos certificados ISO 9001 que aseguran una entrega consistente y de alto estándar.</p>
                 </div>
                 <div className="text-center p-6 border border-border rounded-sm bg-secondary/20">
                     <Briefcase className="w-12 h-12 text-accent mx-auto mb-4" />
-                    <h4 className="font-heading font-bold text-xl mb-2">B2B Focus</h4>
-                    <p className="text-sm">Exclusively dedicated to the needs of industrial and commercial partners.</p>
+                    <h4 className="font-heading font-bold text-xl mb-2">Enfoque B2B</h4>
+                    <p className="text-sm">Dedicados exclusivamente a las necesidades de socios industriales y comerciales.</p>
                 </div>
             </div>
         </div>
