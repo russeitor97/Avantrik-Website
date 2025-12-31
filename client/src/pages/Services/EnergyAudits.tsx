@@ -73,7 +73,26 @@ export default function EnergyAudits() {
             </div>
           </div>
 
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-8">
+            <div className="bg-primary text-primary-foreground p-8 rounded-sm shadow-lg">
+              <h3 className="font-heading font-bold text-2xl mb-6">¿QUÉ ANALIZAMOS?</h3>
+              <p className="mb-4 text-primary-foreground/90">Durante la auditoría energética evaluamos:</p>
+              <ul className="space-y-4">
+                {[
+                  "Sistemas HVAC y climatización",
+                  "Infraestructura eléctrica de baja y media tensión",
+                  "Consumo energético por áreas y procesos",
+                  "Equipos críticos y su eficiencia operativa",
+                  "Patrones de uso y oportunidades de optimización"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3">
+                    <CheckCircle className="w-5 h-5 text-accent shrink-0 mt-0.5" />
+                    <span className="text-sm">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
             <div className="bg-card shadow-lg border border-border p-8 rounded-sm sticky top-24">
               <h3 className="font-heading font-bold text-2xl mb-4">Inicie su Auditoría</h3>
               <p className="text-muted-foreground mb-6">Deje de pagar por energía que no utiliza. Contáctenos para programar una evaluación preliminar.</p>
