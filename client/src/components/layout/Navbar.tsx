@@ -34,7 +34,7 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
         isScrolled
-          ? "bg-background/95 backdrop-blur-md border-border py-4 shadow-sm"
+          ? "bg-white/10 backdrop-blur-md border-white/20 py-4 shadow-lg"
           : "bg-transparent border-transparent py-6"
       )}
     >
