@@ -20,39 +20,57 @@ export default function EnergyAudits() {
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">Análisis de Energía de Precisión</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Nuestras auditorías energéticas van más allá de simples lecturas de medidores. Utilizamos equipos de monitoreo avanzados y análisis de software para mapear el perfil energético completo de su instalación. Identificamos exactamente dónde, cuándo y cómo se desperdicia la energía.
-            </p>
+            <h2 className="text-3xl font-heading font-bold text-foreground">AUDITORÍAS ENERGÉTICAS MÁS SOLICITADAS Y CERTIFICACIONES DEL PERSONAL</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border">
-                    <BarChart3 className="w-10 h-10 text-accent mb-4" />
-                    <h3 className="font-heading font-bold text-xl mb-2">Perfilado de Consumo</h3>
-                    <p className="text-sm text-muted-foreground">Perfilado de carga detallado para comprender la demanda pico y las ineficiencias de la carga base.</p>
-                </div>
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border">
-                    <Settings className="w-10 h-10 text-accent mb-4" />
-                    <h3 className="font-heading font-bold text-xl mb-2">Eficiencia de Equipos</h3>
-                    <p className="text-sm text-muted-foreground">Análisis de rendimiento de motores, compresores y sistemas térmicos.</p>
-                </div>
-            </div>
+            <div className="space-y-10">
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">1) Auditoría Energética Preliminar (Walk-Through)</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Diagnóstico rápido para identificar oportunidades de ahorro.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> Revisión de facturas CFE, inspección general, estimación inicial de ahorros.</p>
+              </div>
 
-            <h3 className="text-2xl font-heading font-bold text-foreground pt-8">Lo que Entregamos</h3>
-            <ul className="space-y-4">
-              {[
-                "Informe exhaustivo alineado con la norma ISO 50001",
-                "Análisis de ROI para las mejoras recomendadas",
-                "Imagen térmica de paneles eléctricos y envolvente del edificio",
-                "Análisis de calidad de energía (armónicos, caídas de voltaje)",
-                "Estrategia de optimización de estructura tarifaria"
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-accent shrink-0" />
-                  <span className="text-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">2) Auditoría Energética Detallada (Nivel 2)</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Evaluación profunda de sistemas energéticos.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> HVAC, motores, iluminación, aire comprimido, mediciones reales.</p>
+              </div>
+
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">3) Auditoría Energética Integral o de Inversión (Nivel 3)</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Justificar CAPEX y proyectos de modernización.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> Modelado energético, mediciones 30 días, ROI, VAN, TIR.</p>
+              </div>
+
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">4) Auditoría para Implementación de ISO 50001</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Sistema de Gestión de Energía.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> EnPIs, línea base, controles operativos, auditoría anual.</p>
+              </div>
+
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">5) Auditoría HVAC (Chillers, VRF, Paquetes y más)</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Optimización térmica y reducción de costos.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> kW/TR real, controles, CAI, ventilación ASHRAE.</p>
+              </div>
+
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">6) Auditoría de Refrigeración Industrial/Comercial</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Optimización de cadenas frías.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> Evaporadores, condensadores, cargas térmicas.</p>
+              </div>
+
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">7) Auditoría de cumplimiento de Código Red 2.0 CRE</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Reducir demanda, armónicos y costos eléctricos.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> FP, armónicos, tarifas MT/BT, calidad de energía para cumplimiento CRE.</p>
+              </div>
+
+              <div className="border-l-4 border-accent pl-6">
+                <h3 className="text-xl font-heading font-bold mb-2 text-primary">08) Auditoría / Dictamen de Perito Ambiental – Estado de Querétaro</h3>
+                <p className="text-muted-foreground mb-2"><strong>Objetivo:</strong> Verificar el cumplimiento ambiental del establecimiento conforme a la normatividad ambiental estatal y federal aplicable en el Estado de Querétaro.</p>
+                <p className="text-muted-foreground"><strong>Alcance:</strong> Revisar permisos, licencias y obligaciones ambientales del establecimiento y emitir dictamen técnico por Perito Ambiental acreditado en Querétaro.</p>
+              </div>
+            </div>
           </div>
 
           <div className="lg:col-span-1">
