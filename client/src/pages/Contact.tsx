@@ -34,7 +34,9 @@ export default function Contact() {
                 <div>
                   <h3 className="font-bold text-foreground">Teléfono</h3>
                   <p className="text-muted-foreground">(+52) 442-219-6915</p>
+                  <p className="text-muted-foreground">(+52) 442-739-4819</p>
                   <p className="text-muted-foreground">(+52) 614-105-9868</p>
+                  <p className="text-muted-foreground">(+52) 555-123-4567</p>
                   <p className="text-xs text-muted-foreground mt-1">Lun-Vie, 8am - 6pm CST</p>
                 </div>
               </div>

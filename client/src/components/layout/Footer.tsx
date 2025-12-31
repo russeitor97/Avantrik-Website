@@ -55,7 +55,9 @@ export function Footer() {
                 <Phone className="w-5 h-5 text-accent shrink-0" />
                 <div className="flex flex-col">
                   <span>(+52) 442-219-6915</span>
+                  <span>(+52) 442-739-4819</span>
                   <span>(+52) 614-105-9868</span>
+                  <span>(+52) 555-123-4567</span>
                 </div>
               </li>
               <li className="flex items-center gap-3">
