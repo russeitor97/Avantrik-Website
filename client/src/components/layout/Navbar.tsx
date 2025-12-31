@@ -34,17 +34,17 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
         isScrolled
-          ? "bg-background/95 backdrop-blur-md border-border py-4 shadow-sm"
-          : "bg-transparent border-transparent py-6"
+          ? "bg-background/80 backdrop-blur-md border-border py-4 shadow-sm"
+          : "bg-background/20 backdrop-blur-sm border-transparent py-6"
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link href="/">
-          <a className="flex items-center gap-3 group">
+          <a className="flex items-center gap-4 group">
             <img 
               src={logo} 
               alt="Avantrik Logo" 
-              className="w-10 h-10 object-contain brightness-110 contrast-125"
+              className="w-14 h-14 object-contain brightness-110 contrast-125 transition-transform group-hover:scale-105"
             />
             <div className="flex flex-col">
               <span className="font-heading font-bold text-2xl leading-none tracking-tight text-primary dark:text-white">
@@ -58,7 +58,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Nav */}
-        <div className="hidden lg:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-12 pr-8">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
               <a
