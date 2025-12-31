@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Menu, X, Activity } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
+
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,10 +40,12 @@ export function Navbar() {
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link href="/">
-          <a className="flex items-center gap-2 group">
-            <div className="w-10 h-10 bg-primary text-primary-foreground flex items-center justify-center rounded-sm group-hover:bg-accent transition-colors">
-              <Activity className="w-6 h-6" />
-            </div>
+          <a className="flex items-center gap-3 group">
+            <img 
+              src={logo} 
+              alt="Avantrik Logo" 
+              className="w-10 h-10 object-contain brightness-110 contrast-125"
+            />
             <div className="flex flex-col">
               <span className="font-heading font-bold text-2xl leading-none tracking-tight text-primary dark:text-white">
                 AVANTRIK

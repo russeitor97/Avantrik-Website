@@ -1,6 +1,8 @@
 import { Link } from "wouter";
 import { Activity, Mail, MapPin, Phone } from "lucide-react";
 
+import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
+
 export function Footer() {
   return (
     <footer className="bg-primary text-primary-foreground pt-16 pb-8 border-t-4 border-accent">
@@ -8,10 +10,12 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
           {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-accent text-accent-foreground flex items-center justify-center rounded-sm">
-                <Activity className="w-5 h-5" />
-              </div>
+            <div className="flex items-center gap-3">
+              <img 
+                src={logo} 
+                alt="Avantrik Logo" 
+                className="w-8 h-8 object-contain"
+              />
               <span className="font-heading font-bold text-2xl tracking-tight">
                 AVANTRIK
               </span>

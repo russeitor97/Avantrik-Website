@@ -60,8 +60,8 @@
   --popover: 0 0% 100%;
   --popover-foreground: 222 47% 11%;
 
-  /* Primary: Deep Industrial Blue */
-  --primary: 222 47% 11%;
+  /* Primary: Deep Industrial Blue from Logo */
+  --primary: 215 50% 15%;
   --primary-foreground: 210 40% 98%;
 
   /* Secondary: Light Steel Grey */
@@ -72,9 +72,9 @@
   --muted: 210 40% 96.1%;
   --muted-foreground: 215.4 16.3% 46.9%;
 
-  /* Accent: Electric Blue / Cyan for Energy Efficiency */
-  --accent: 199 89% 48%;
-  --accent-foreground: 222 47% 11%;
+  /* Accent: Vibrant Green from Logo */
+  --accent: 85 85% 55%;
+  --accent-foreground: 215 50% 15%;
 
   --destructive: 0 84.2% 60.2%;
   --destructive-foreground: 210 40% 98%;
