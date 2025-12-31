@@ -50,14 +50,6 @@ export default function Contact() {
               </div>
             </div>
 
-            <div className="bg-primary text-primary-foreground p-8 rounded-sm mt-8">
-                <h3 className="font-heading font-bold text-xl mb-2 flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-accent" /> Servicio de Emergencia
-                </h3>
-                <p className="text-primary-foreground/80 text-sm">
-                    Para fallas críticas del sistema, nuestro equipo de soporte está disponible 24/7 para clientes con contrato. Por favor, llame a la línea de emergencia dedicada proporcionada en su acuerdo de servicio.
-                </p>
-            </div>
           </div>
 
           {/* Form Side */}
