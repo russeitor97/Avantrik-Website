@@ -1,0 +1,119 @@
+PROMPT FOR AI – AVANTRIK WEBSITE
+
+Act as a web designer and digital strategist specialized in engineering, industrial infrastructure, and energy efficiency companies.
+
+I need you to design the full structure and base content for the website of a company called Avantrik, focused on engineering, energy efficiency, and technical systems for businesses.
+
+ABOUT THE COMPANY
+
+Avantrik is an engineering company that provides technical solutions to industrial, commercial, and corporate clients.
+
+Its core services include:
+
+Energy audits for companies
+
+Industrial HVAC systems
+
+Low and medium voltage electrical engineering
+
+Geothermal systems and energy efficiency solutions
+
+Avantrik is not focused on residential customers. All services are designed exclusively for business and industrial environments.
+
+The company’s approach is technical, professional, and results-driven, with a strong focus on:
+
+Operational cost reduction
+
+System optimization
+
+Energy efficiency
+
+Applied engineering
+
+WEBSITE GOALS
+
+Clearly explain what Avantrik does within seconds
+
+Clearly present the services offered
+
+Build technical and professional trust
+
+Make it easy for visitors to contact the company (WhatsApp and contact form)
+
+The website should feel serious, structured, and engineering-oriented, without being cold or overly corporate.
+
+REQUIRED SITE STRUCTURE
+
+Design the website with the following pages:
+
+Home
+
+About Avantrik
+
+Energy Audits
+
+Industrial HVAC
+
+Electrical Engineering (Low & Medium Voltage)
+
+Geothermal Systems
+
+Contact
+
+HOME PAGE CONTENT
+
+Strong hero section highlighting engineering and energy efficiency
+
+Short explanation of Avantrik’s expertise and value proposition
+
+Services section with cards linking to each service page
+
+Clear calls to action (Request an audit / Contact us)
+
+SERVICE PAGE CONTENT
+
+For each service page, include:
+
+A clear, business-oriented title
+
+A concise but technical explanation
+
+What is analyzed or delivered
+
+Key benefits for the client
+
+A clear call to action (WhatsApp or contact form)
+
+TONE AND STYLE
+
+Professional
+
+Clear
+
+Direct
+
+Technical but understandable
+
+No exaggerated marketing language
+
+DESIGN DIRECTION
+
+Modern, clean, and structured layout
+
+Engineering-focused visual language
+
+Industrial and technical imagery (plants, systems, equipment, engineering environments)
+
+Fully responsive design (desktop and mobile)
+
+EXPECTED OUTPUT
+
+Generate:
+
+The complete website structure
+
+Base copy for each section and page
+
+Clear content hierarchy
+
+Well-placed calls to action
