@@ -129,9 +129,6 @@ export default function Home() {
                 Iniciar un Proyecto
               </Button>
             </Link>
-            <Button size="lg" variant="outline" className="border-primary-foreground text-primary-foreground hover:bg-primary-foreground/10 font-bold h-14 px-8 uppercase tracking-wide">
-              Contactar Ventas
-            </Button>
           </div>
         </div>
       </section>
