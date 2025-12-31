@@ -29,24 +29,12 @@ export default function Contact() {
             <div className="space-y-6">
               <div className="flex items-start gap-4">
                 <div className="w-12 h-12 bg-secondary flex items-center justify-center rounded-sm shrink-0">
-                  <MapPin className="w-6 h-6 text-accent" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-foreground">Sede Central</h3>
-                  <p className="text-muted-foreground">
-                    Parque Industrial 123.<br />
-                    Sector 4, Ciudad Tecnológica, CP 90210
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-12 h-12 bg-secondary flex items-center justify-center rounded-sm shrink-0">
                   <Phone className="w-6 h-6 text-accent" />
                 </div>
                 <div>
                   <h3 className="font-bold text-foreground">Teléfono</h3>
-                  <p className="text-muted-foreground">+52 (555) 123-4567</p>
+                  <p className="text-muted-foreground">(+52) 442-219-6915</p>
+                  <p className="text-muted-foreground">(+52) 442-739-4819</p>
                   <p className="text-xs text-muted-foreground mt-1">Lun-Vie, 8am - 6pm CST</p>
                 </div>
               </div>
@@ -57,8 +45,7 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-bold text-foreground">Correo</h3>
-                  <p className="text-muted-foreground">soluciones@avantrik.com</p>
-                  <p className="text-muted-foreground">soporte@avantrik.com</p>
+                  <p className="text-muted-foreground">info@avantrik.com</p>
                 </div>
               </div>
             </div>

@@ -47,21 +47,20 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Contacto */}
           <div>
             <h3 className="font-heading font-bold text-lg mb-6 text-white">Contacto</h3>
             <ul className="space-y-4 text-sm text-muted-foreground">
-              <li className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-accent shrink-0" />
-                <span>Parque Industrial 123.<br />Sector 4, Ciudad Tecnológica</span>
-              </li>
               <li className="flex items-center gap-3">
                 <Phone className="w-5 h-5 text-accent shrink-0" />
-                <span>+52 (555) 123-4567</span>
+                <div className="flex flex-col">
+                  <span>(+52) 442-219-6915</span>
+                  <span>(+52) 442-739-4819</span>
+                </div>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-5 h-5 text-accent shrink-0" />
-                <span>soluciones@avantrik.com</span>
+                <span>info@avantrik.com</span>
               </li>
             </ul>
           </div>
