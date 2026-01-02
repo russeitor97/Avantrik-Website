@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Activity, Mail, MapPin, Phone } from "lucide-react";
+import { Activity, Mail, MapPin, Phone, Linkedin } from "lucide-react";
 
 import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
 
@@ -23,6 +23,17 @@ export function Footer() {
             <p className="text-muted-foreground text-sm leading-relaxed max-w-xs">
               Excelencia en ingeniería para la eficiencia. Proporcionamos soluciones técnicas avanzadas para sistemas residenciales e industriales en HVAC, Electricidad y Geotermia.
             </p>
+            <div className="flex gap-4">
+              <a 
+                href="https://mx.linkedin.com/company/avantrik" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-muted-foreground hover:text-accent transition-colors"
+                aria-label="LinkedIn"
+              >
+                <Linkedin className="w-6 h-6" />
+              </a>
+            </div>
           </div>
 
           {/* Quick Links */}

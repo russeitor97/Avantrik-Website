@@ -1,6 +1,7 @@
 import { Layout } from "@/components/layout/Layout";
 import { ContactForm } from "@/components/contact-form";
-import { MapPin, Phone, Mail, Clock } from "lucide-react";
+import { MapPin, Phone, Mail, Clock, Linkedin } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Contact() {
   return (
@@ -48,6 +49,26 @@ export default function Contact() {
                 <div>
                   <h3 className="font-bold text-foreground">Correo</h3>
                   <p className="text-muted-foreground">info@avantrik.com</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-secondary flex items-center justify-center rounded-sm shrink-0">
+                  <Linkedin className="w-6 h-6 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Redes Sociales</h3>
+                  <a 
+                    href="https://mx.linkedin.com/company/avantrik" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-block mt-2"
+                  >
+                    <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-white flex items-center gap-2">
+                      <Linkedin className="w-4 h-4" />
+                      Visitar LinkedIn
+                    </Button>
+                  </a>
                 </div>
               </div>
             </div>
