@@ -59,9 +59,9 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <div className="w-full md:w-1/2">
-              <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Quiénes Somos</h2>
+              <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Ingeniería Industrial y Eficiencia Energética</h2>
               <h3 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6">
-                Precisión Técnica para<br/>Entornos Complejos
+                Soluciones de Ingeniería, HVAC y Energía para la Industria
               </h3>
               <p className="text-muted-foreground text-lg leading-relaxed mb-6">
                 Avantrik es una firma de ingeniería dedicada a optimizar la infraestructura industrial y comercial. No solo reparamos sistemas; los re-ingeniamos para lograr la máxima eficiencia y fiabilidad.
