@@ -12,15 +12,18 @@ export default function EnergyAudits() {
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
         </div>
         <div className="container mx-auto px-4 relative z-10 pt-20">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Auditorías Energéticas</h1>
-            <p className="text-xl text-gray-200 max-w-2xl">Análisis basado en datos para identificar desperdicios, reducir costos y optimizar patrones de consumo.</p>
+            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Auditorías Energéticas Industriales
+</h1>
+            <p className="text-xl text-gray-200 max-w-2xl">Auditorías energéticas industriales basadas en datos para identificar desperdicios,
+              reducir costos eléctricos y optimizar el consumo energético en empresas.</p>
         </div>
       </div>
 
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">AUDITORÍAS ENERGÉTICAS MÁS SOLICITADAS Y CERTIFICACIONES DEL PERSONAL</h2>
+            <h2 className="text-3xl font-heading font-bold text-foreground">AUDITORÍAS ENERGÉTICAS INDUSTRIALES Y CERTIFICACIONES DEL PERSONAL
+</h2>
             
             <div className="space-y-10">
               <div className="border-l-4 border-accent pl-6">

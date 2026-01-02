@@ -12,15 +12,16 @@ export default function ElectricalEngineering() {
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
         </div>
         <div className="container mx-auto px-4 relative z-10 pt-20">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Ingeniería Eléctrica</h1>
-            <p className="text-xl text-gray-200 max-w-2xl">Infraestructura de energía confiable para operaciones industriales de misión crítica.</p>
+            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Ingeniería Eléctrica Industrial para Empresas</h1>
+            <p className="text-xl text-gray-200 max-w-2xl">Proyectos de ingeniería eléctrica industrial para plantas y edificios, enfocados en
+            seguridad eléctrica, eficiencia energética y operación confiable en baja y media tensión.</p>
         </div>
       </div>
 
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">Potenciando la Industria</h2>
+            <h2 className="text-3xl font-heading font-bold text-foreground">Servicios de Ingeniería Eléctrica Industrial</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               Nos especializamos en sistemas eléctricos de Baja y Media Tensión. Desde tableros principales hasta redes de distribución, aseguramos que su instalación tenga energía estable, segura y eficiente. Nuestros ingenieros diseñan sistemas que minimizan el tiempo de inactividad y soportan pesadas cargas industriales.
             </p>

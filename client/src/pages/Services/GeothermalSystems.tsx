@@ -12,15 +12,16 @@ export default function GeothermalSystems() {
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
         </div>
         <div className="container mx-auto px-4 relative z-10 pt-20">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Sistemas Geotérmicos</h1>
-            <p className="text-xl text-gray-200 max-w-2xl">Soluciones de energía térmica sostenible para instalaciones industriales con visión de futuro.</p>
+            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Sistemas Geotérmicos Industriales</h1>
+            <p className="text-xl text-gray-200 max-w-2xl">Sistemas geotérmicos industriales para calefacción y refrigeración de edificios y plantas,
+              enfocados en eficiencia energética, reducción de costos operativos y sostenibilidad a largo plazo.</p>
         </div>
       </div>
 
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">Eficiencia Impulsada por la Tierra</h2>
+            <h2 className="text-3xl font-heading font-bold text-foreground">Sistemas Geotérmicos de Alta Eficiencia para la Industria</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               La tecnología geotérmica aprovecha la temperatura constante de la tierra para proporcionar calefacción y refrigeración altamente eficientes. Para grandes edificios industriales y comerciales, esto se traduce en reducciones masivas en los costos operativos y la huella de carbono durante el ciclo de vida del sistema.
             </p>

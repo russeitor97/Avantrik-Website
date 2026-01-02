@@ -12,15 +12,19 @@ export default function IndustrialHVAC() {
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
         </div>
         <div className="container mx-auto px-4 relative z-10 pt-20">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">HVAC Industrial</h1>
-            <p className="text-xl text-gray-200 max-w-2xl">Ingeniería de ventilación y control climático de alta resistencia para instalaciones a gran escala.</p>
+            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">HVAC Industrial para Plantas y Edificios Industriales
+</h1>
+            <p className="text-xl text-gray-200 max-w-2xl"><p className="text-xl text-gray-200 max-w-2xl">
+              Diseño, instalación y optimización de sistemas HVAC industrial para plantas de manufactura y edificios industriales, enfocados en eficiencia energética, confiabilidad operativa y control térmico preciso.
+            </p>
+</p>
         </div>
       </div>
 
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           <div className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">Control Climático Crítico</h2>
+            <h2 className="text-3xl font-heading font-bold text-foreground">Sistemas HVAC Industriales para Procesos Críticos</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               Los entornos industriales requieren soluciones HVAC robustas que van más allá del confort. Diseñamos, instalamos y optimizamos sistemas que mantienen temperaturas críticas de proceso, aseguran la calidad del aire y operan con la máxima eficiencia energética bajo cargas pesadas.
             </p>
