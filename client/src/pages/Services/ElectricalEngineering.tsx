@@ -1,18 +1,16 @@
-import { Helmet } from "react-helmet";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Zap, ShieldCheck, Cable, Lightbulb } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import electricalImage from "@assets/generated_images/professional_industrial_electrical_control_panel.png";
 
 export default function ElectricalEngineering() {
   return (
-    <Layout>    <Helmet>
+    <Layout>    
+      <Helmet>
         <title>Ingeniería Eléctrica Industrial | Avantrik</title>
-        <meta
-          name="description"
-          content="Servicios de ingeniería eléctrica industrial en baja y media tensión. Tableros, distribución, protección eléctrica y eficiencia energética para plantas industriales."
-        />
+        <meta name="description" content="Servicios de ingeniería eléctrica en baja y media tensión para plantas industriales y edificios comerciales. Proyectos seguros y eficientes." />
       </Helmet>
 
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">

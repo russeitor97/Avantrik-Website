@@ -2,11 +2,16 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Cpu, Sprout, ArrowDownCircle } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import geothermalImage from "@assets/generated_images/industrial_geothermal_system_visualization.png";
 
 export default function GeothermalSystems() {
   return (
     <Layout>
+      <Helmet>
+        <title>Sistemas Geotérmicos Industriales | Avantrik</title>
+        <meta name="description" content="Soluciones de energía geotérmica para calefacción y refrigeración industrial. Ahorro de costos y sostenibilidad ambiental." />
+      </Helmet>
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${geothermalImage})` }}>
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />

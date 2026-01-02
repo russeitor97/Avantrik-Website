@@ -2,11 +2,16 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Wind, Thermometer, Fan, Gauge } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import hvacImage from "@assets/generated_images/large_scale_industrial_hvac_systems_on_rooftop.png";
 
 export default function IndustrialHVAC() {
   return (
     <Layout>
+      <Helmet>
+        <title>Sistemas HVAC Industriales | Avantrik</title>
+        <meta name="description" content="Diseño e instalación de sistemas HVAC industriales para plantas de manufactura. Control térmico preciso y eficiencia energética." />
+      </Helmet>
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${hvacImage})` }}>
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
