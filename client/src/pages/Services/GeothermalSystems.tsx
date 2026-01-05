@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -6,7 +7,20 @@ import geothermalImage from "@assets/generated_images/industrial_geothermal_syst
 
 export default function GeothermalSystems() {
   return (
-    <Layout>
+    <Layout>    <Helmet>
+        <title>Sistemas Geotérmicos Industriales | Avantrik México</title>
+
+        <meta
+          name="description"
+          content="Sistemas geotérmicos industriales en México. Soluciones de calefacción y refrigeración de alta eficiencia para plantas y edificios con reducción de costos y emisiones."
+        />
+
+        <link
+          rel="canonical"
+          href="https://www.avantrik.com/services/geothermal-systems"
+        />
+      </Helmet>
+
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${geothermalImage})` }}>
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />

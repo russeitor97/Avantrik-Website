@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -6,7 +7,20 @@ import hvacImage from "@assets/generated_images/large_scale_industrial_hvac_syst
 
 export default function IndustrialHVAC() {
   return (
-    <Layout>
+    <Layout>    <Helmet>
+        <title>HVAC Industrial para Plantas y Edificios | Avantrik México</title>
+
+        <meta
+          name="description"
+          content="Sistemas HVAC industrial en México. Diseño, instalación y optimización de climatización industrial para plantas, procesos críticos y edificios de alto desempeño."
+        />
+
+        <link
+          rel="canonical"
+          href="https://www.avantrik.com/services/industrial-hvac"
+        />
+      </Helmet>
+
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${hvacImage})` }}>
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />

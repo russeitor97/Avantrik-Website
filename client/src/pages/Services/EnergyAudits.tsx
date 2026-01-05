@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -6,7 +7,20 @@ import energyImage from "@assets/generated_images/digital_energy_audit_tablet_in
 
 export default function EnergyAudits() {
   return (
-    <Layout>
+    <Layout>    <Helmet>
+        <title>Auditorías Energéticas Industriales | Avantrik México</title>
+
+        <meta
+          name="description"
+          content="Auditorías energéticas industriales en México. Diagnóstico, análisis y optimización del consumo energético para reducir costos eléctricos y mejorar la eficiencia."
+        />
+
+        <link
+          rel="canonical"
+          href="https://www.avantrik.com/services/energy-audits"
+        />
+      </Helmet>
+
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${energyImage})` }}>
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />

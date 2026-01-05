@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -6,7 +7,20 @@ import electricalImage from "@assets/generated_images/professional_industrial_el
 
 export default function ElectricalEngineering() {
   return (
-    <Layout>
+    <Layout>    <Helmet>
+        <title>Ingeniería Eléctrica Industrial | Avantrik México</title>
+
+        <meta
+          name="description"
+          content="Ingeniería eléctrica industrial en México. Diseño e instalación de sistemas de baja y media tensión, tableros eléctricos, auditorías de seguridad y eficiencia energética para empresas."
+        />
+
+        <link
+          rel="canonical"
+          href="https://www.avantrik.com/services/electrical-engineering"
+        />
+      </Helmet>
+
       <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${electricalImage})` }}>
           <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
