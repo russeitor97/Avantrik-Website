@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { HeroSection } from "@/components/ui/hero-section";
 import { ServiceCard } from "@/components/ui/service-card";
@@ -44,7 +45,22 @@ export default function Home() {
   ];
 
   return (
-    <Layout>
+    <Layout>    <Helmet>
+        <title>
+          Ingeniería Industrial, HVAC y Eficiencia Energética | Avantrik México
+        </title>
+
+        <meta
+          name="description"
+          content="Empresa de ingeniería industrial en México especializada en HVAC industrial, auditorías energéticas, ingeniería eléctrica y soluciones técnicas para plantas y edificios."
+        />
+
+        <link
+          rel="canonical"
+          href="https://www.avantrik.com/"
+        />
+      </Helmet>
+
       <HeroSection 
         image={heroImage}
         title="INGENIERÍA PARA EL FUTURO DE LA INDUSTRIA"

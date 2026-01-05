@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { ContactForm } from "@/components/contact-form";
 import { MapPin, Phone, Mail, Clock, Linkedin } from "lucide-react";
@@ -5,7 +6,20 @@ import { Button } from "@/components/ui/button";
 
 export default function Contact() {
   return (
-    <Layout>
+    <Layout>    <Helmet>
+        <title>Contacto | Avantrik Ingeniería Industrial en México</title>
+
+        <meta
+          name="description"
+          content="Contacta a Avantrik para proyectos de ingeniería industrial, HVAC, auditorías energéticas y sistemas eléctricos en México. Atención especializada B2B."
+        />
+
+        <link
+          rel="canonical"
+          href="https://www.avantrik.com/contact"
+        />
+      </Helmet>
+
       <div className="bg-secondary/30 py-16">
         <div className="container mx-auto px-4 text-center">
            <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4">Contacto</h1>

@@ -1,10 +1,24 @@
+import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { CheckCircle, Users, Award, Briefcase } from "lucide-react";
 import heroImage from "@assets/generated_images/modern_industrial_engineering_facility_with_technical_atmosphere.png";
 
 export default function About() {
   return (
-    <Layout>
+    <Layout>    <Helmet>
+          <title>Sobre Avantrik | Ingeniería Industrial y Energética en México</title>
+
+          <meta
+            name="description"
+            content="Conoce Avantrik: empresa mexicana de ingeniería especializada en HVAC industrial, ingeniería eléctrica y eficiencia energética para industrias y edificios."
+          />
+
+          <link
+            rel="canonical"
+            href="https://www.avantrik.com/about"
+          />
+        </Helmet>
+
        <div className="relative h-[40vh] min-h-[300px] flex items-center overflow-hidden bg-primary">
         <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${heroImage})` }}>
           <div className="absolute inset-0 bg-primary/90 mix-blend-multiply" />

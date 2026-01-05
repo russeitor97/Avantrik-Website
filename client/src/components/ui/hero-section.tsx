@@ -34,9 +34,10 @@ export function HeroSection({
       <div className="container mx-auto px-4 relative z-10 pt-20">
         <div className="max-w-3xl animate-in slide-in-from-left-10 duration-700 fade-in">
           <div className="inline-block px-3 py-1 mb-6 border-l-4 border-accent bg-primary/20 backdrop-blur-sm">
-            <span className="text-accent font-bold tracking-widest uppercase text-xs">
-              Industrial Engineering Excellence
-            </span>
+            <p className="text-accent font-bold tracking-widest uppercase text-xs">
+              Excelencia en Ingeniería Industrial
+            </p>
+
           </div>
           
           <h1 className="text-5xl md:text-6xl lg:text-7xl font-heading font-bold text-white mb-6 leading-tight">
