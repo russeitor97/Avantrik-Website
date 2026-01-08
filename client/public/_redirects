@@ -1,8 +1,15 @@
-/acerca-de-nosotros                       /about                                   301
-/copia-de-hvac                            /services/industrial-hvac                301
-/services-6                               /services/energy-audits                  301
-/blank-2                                  /contact                                 301
-/geotermia-empresarial                    /services/geothermal-systems             301
-/service-page/agenda-tu-sesión-de-diagnóstico   /contact                             301
+# REDIRECTS DE URLs VIEJAS (ESPAÑOL) A URLs NUEVAS (INGLÉS)
 
-/*   /index.html   200
+/auditoria-energetica        /services/energy-audits              301
+/hvac-industrial             /services/industrial-hvac            301
+/ingenieria-electrica        /services/electrical-engineering     301
+/geotermia                   /services/geothermal-systems         301
+
+# ELIMINAR URLs BASURA / WIX
+/blank                       410
+/blank-1                     410
+/blank-3                     410
+/diagnostico                 410
+
+# SPA FALLBACK (OBLIGATORIO PARA REACT)
+ /*                          /index.html                          200
