@@ -40,7 +40,7 @@ export function Navbar() {
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link href="/">
-          <a className="flex items-center gap-3 group">
+          <div className="flex items-center gap-3 group cursor-pointer">
             <img 
               src={logo} 
               alt="Avantrik Logo" 
@@ -54,25 +54,25 @@ export function Navbar() {
                 Soluciones de Ingeniería
               </span>
             </div>
-          </a>
+          </div>
         </Link>
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
-              <a
+              <span
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-accent uppercase tracking-wide",
+                  "text-sm font-medium transition-colors hover:text-accent uppercase tracking-wide cursor-pointer",
                   location === link.href
                     ? "text-accent font-semibold"
                     : isScrolled
                     ? "text-foreground"
-                    : "text-foreground/90 hover:text-foreground" // Adjust based on hero contrast, assuming light theme mostly or dark hero
+                    : "text-foreground/90 hover:text-foreground"
                 )}
               >
                 {link.name}
-              </a>
+              </span>
             </Link>
           ))}
           <Link href="/contact">
@@ -96,15 +96,15 @@ export function Navbar() {
         <div className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border p-4 flex flex-col gap-4 shadow-lg animate-in slide-in-from-top-5">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
-              <a
+              <span
                 className={cn(
-                  "text-lg font-medium py-2 border-b border-border/50",
+                  "text-lg font-medium py-2 border-b border-border/50 cursor-pointer",
                   location === link.href ? "text-accent" : "text-foreground"
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.name}
-              </a>
+              </span>
             </Link>
           ))}
           <Link href="/contact">
