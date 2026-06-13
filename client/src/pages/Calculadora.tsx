@@ -366,6 +366,13 @@ function CalcAutomatizacion() {
                     <span className="font-bold text-foreground">{fmt(hvacCost)}</span>
                   </div>
 
+                  {control && (
+                    <div className="flex justify-between items-center py-2 border-b border-border/50">
+                      <span className="text-sm text-muted-foreground">Factor de ahorro estimado</span>
+                      <span className="font-bold text-foreground">{(control.low * 100).toFixed(0)}% — {(control.high * 100).toFixed(0)}%</span>
+                    </div>
+                  )}
+
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
                     <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual estimado</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(savingsLow)} — {fmt(savingsHigh)}</p>
@@ -469,13 +476,15 @@ function CalcAlmacenamiento() {
   const kwPerTon = condition?.kwPerTon || 1.0;
   const peak = parseFloat(peakDemand.replace(/,/g, "")) || 0;
   const charge = parseFloat(demandCharge.replace(/,/g, "")) || 0;
+  const monthlyEnergyCost = parseFloat(monthlyCost.replace(/,/g, "")) || 0;
 
   const shiftedTons = capacity * shift;
   const storageCapacity = shiftedTons * hours;
   const demandReduction = shiftedTons * kwPerTon;
   const demandSavings = demandReduction * charge;
-  const totalSavingsLow = demandSavings * 1.02;
-  const totalSavingsHigh = demandSavings * 1.05;
+  // Excel '02 Almacenamiento'!E11: ahorro total = ahorro por demanda + 2% a 5% del gasto eléctrico mensual (mejor horario de operación)
+  const totalSavingsLow = demandSavings + 0.02 * monthlyEnergyCost;
+  const totalSavingsHigh = demandSavings + 0.05 * monthlyEnergyCost;
   const annualLow = totalSavingsLow * 12;
   const annualHigh = totalSavingsHigh * 12;
   const inv = parseFloat(investment.replace(/,/g, "")) || 0;
@@ -567,8 +576,12 @@ function CalcAlmacenamiento() {
                     <span className="text-sm text-muted-foreground">Reducción estimada de demanda</span>
                     <span className="font-bold">{fmtNum(demandReduction)} kW</span>
                   </div>
+                  <div className="flex justify-between items-center py-2 border-b border-border/50">
+                    <span className="text-sm text-muted-foreground">Ahorro mensual por demanda</span>
+                    <span className="font-bold">{fmt(demandSavings)}</span>
+                  </div>
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual total estimado</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(totalSavingsLow)} — {fmt(totalSavingsHigh)}</p>
                   </div>
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
@@ -778,6 +791,12 @@ function CalcPlanta() {
                     <span className="text-sm text-muted-foreground">Costo anual de operación</span>
                     <span className="font-bold">{fmt(annualCost)}</span>
                   </div>
+                  {condition && (
+                    <div className="flex justify-between items-center py-2 border-b border-border/50">
+                      <span className="text-sm text-muted-foreground">Factor de ahorro estimado</span>
+                      <span className="font-bold">{(condition.low * 100).toFixed(0)}% — {(condition.high * 100).toFixed(0)}%</span>
+                    </div>
+                  )}
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
                     <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual estimado</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(monthlyLow)} — {fmt(monthlyHigh)}</p>
