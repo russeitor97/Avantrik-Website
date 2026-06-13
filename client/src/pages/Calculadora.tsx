@@ -13,6 +13,13 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
+import emailjs from "@emailjs/browser";
+
+// ── EmailJS config (mismas credenciales/template que ContactForm) ──
+const EMAILJS_SERVICE_ID = "service_wjgwyix";
+const EMAILJS_TEMPLATE_ID = "template_mwz95cv";
+const EMAILJS_PUBLIC_KEY = "UL19pglSyFo2jCc8s";
+// ───────────────────────────────────────────────────────────────────
 
 /* ─── Helpers ─── */
 const fmt = (n: number) =>
@@ -67,27 +74,51 @@ function LeadForm({ calculadora, resultados, onComplete }: {
   onComplete: () => void;
 }) {
   const { toast } = useToast();
+  const [sending, setSending] = useState(false);
   const form = useForm<z.infer<typeof leadSchema>>({
     resolver: zodResolver(leadSchema),
     defaultValues: { nombre: "", empresa: "", correo: "", telefono: "", ciudad: "" },
   });
 
-  function onSubmit(values: z.infer<typeof leadSchema>) {
-    // Aquí se envía el lead por correo/CRM/Google Sheets
-    const leadData = {
-      ...values,
-      calculadora,
-      ahorroMensualBajo: resultados.ahorroMensualBajo,
-      ahorroMensualAlto: resultados.ahorroMensualAlto,
-      fecha: new Date().toISOString(),
-    };
-    console.log("Lead capturado:", leadData);
+  async function onSubmit(values: z.infer<typeof leadSchema>) {
+    setSending(true);
+    const mensaje =
+      `Lead capturado desde la Calculadora de Ahorro (${calculadora}).\n\n` +
+      `Ciudad: ${values.ciudad}\n` +
+      `Ahorro mensual estimado: ${fmt(resultados.ahorroMensualBajo)} – ${fmt(resultados.ahorroMensualAlto)}`;
 
-    toast({
-      title: "¡Listo!",
-      description: "En breve un ingeniero de Avantrik te contactará con tu diagnóstico personalizado.",
-    });
-    onComplete();
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          from_name: values.nombre,
+          company: values.empresa,
+          from_email: values.correo,
+          phone: values.telefono,
+          service: `Calculadora de Ahorro — ${calculadora}`,
+          message: mensaje,
+          reply_to: values.correo,
+        },
+        EMAILJS_PUBLIC_KEY,
+      );
+
+      toast({
+        title: "¡Listo!",
+        description: "En breve un ingeniero de Avantrik te contactará con tu diagnóstico personalizado.",
+      });
+      onComplete();
+    } catch (error) {
+      console.error("EmailJS error:", error);
+      toast({
+        title: "Error al enviar",
+        description:
+          "Hubo un problema al enviar tus datos. Intenta de nuevo o escríbenos a info@avantrik.com",
+        variant: "destructive",
+      });
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -137,8 +168,8 @@ function LeadForm({ calculadora, resultados, onComplete }: {
               <FormMessage />
             </FormItem>
           )} />
-          <Button type="submit" className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide hover:bg-accent/90">
-            <Send className="w-4 h-4 mr-2" /> Ver mi estimación y solicitar diagnóstico
+          <Button type="submit" disabled={sending} className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide hover:bg-accent/90">
+            <Send className="w-4 h-4 mr-2" /> {sending ? "Enviando..." : "Ver mi estimación y solicitar diagnóstico"}
           </Button>
         </form>
       </Form>
