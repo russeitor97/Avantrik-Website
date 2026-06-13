@@ -15,11 +15,11 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import emailjs from "@emailjs/browser";
 
-// ── EmailJS config (mismas credenciales/template que ContactForm) ──
+// ── EmailJS config (template dedicado de leads de Calculadora) ──
 const EMAILJS_SERVICE_ID = "service_wjgwyix";
-const EMAILJS_TEMPLATE_ID = "template_mwz95cv";
+const EMAILJS_TEMPLATE_ID = "template_hea7h9x";
 const EMAILJS_PUBLIC_KEY = "UL19pglSyFo2jCc8s";
-// ───────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────
 
 /* ─── Helpers ─── */
 const fmt = (n: number) =>
@@ -27,6 +27,9 @@ const fmt = (n: number) =>
 
 const fmtNum = (n: number) =>
   n.toLocaleString("es-MX", { maximumFractionDigits: 0 });
+
+const yesNo = (v: string) =>
+  (({ no: "No", parcial: "Parcial", si: "Sí" }) as Record<string, string>)[v] || "No especificado";
 
 /* ─── Supuestos técnicos ─── */
 const CONTROL_LEVELS = [
@@ -67,10 +70,19 @@ const leadSchema = z.object({
   ciudad: z.string().min(2, "Ingresa tu ciudad"),
 });
 
+/* ─── Datos técnicos + resultados que cada calculadora envía por correo ─── */
+type LeadPayload = {
+  calculatorType: string;   // "Automatización A/C", "Almacenamiento Térmico", "Planta Agua Helada"
+  calculationData: string;  // resumen de los datos técnicos capturados
+  monthlySavings: string;
+  annualSavings: string;
+  roi: string;
+  investment: string;
+};
+
 /* ─── Lead capture form component ─── */
-function LeadForm({ calculadora, resultados, onComplete }: {
-  calculadora: string;
-  resultados: { ahorroMensualBajo: number; ahorroMensualAlto: number };
+function LeadForm({ payload, onComplete }: {
+  payload: LeadPayload;
   onComplete: () => void;
 }) {
   const { toast } = useToast();
@@ -83,10 +95,6 @@ function LeadForm({ calculadora, resultados, onComplete }: {
   async function onSubmit(values: z.infer<typeof leadSchema>) {
     setSending(true);
 
-    // El ahorro viene del prop `resultados` (rango bajo–alto), no del formulario.
-    const ahorroMensual = `${fmt(resultados.ahorroMensualBajo)} – ${fmt(resultados.ahorroMensualAlto)}`;
-    const ahorroAnual = `${fmt(resultados.ahorroMensualBajo * 12)} – ${fmt(resultados.ahorroMensualAlto * 12)}`;
-
     try {
       await emailjs.send(
         EMAILJS_SERVICE_ID,
@@ -97,9 +105,12 @@ function LeadForm({ calculadora, resultados, onComplete }: {
           from_email: values.correo,
           phone: values.telefono,
           city: values.ciudad,
-          calculadora,
-          ahorroMensual,
-          ahorroAnual,
+          calculator_type: payload.calculatorType,
+          calculation_data: payload.calculationData,
+          monthly_savings: payload.monthlySavings,
+          annual_savings: payload.annualSavings,
+          roi: payload.roi,
+          investment: payload.investment,
           reply_to: values.correo,
         },
         EMAILJS_PUBLIC_KEY,
@@ -386,8 +397,22 @@ function CalcAutomatizacion() {
               {/* Lead capture */}
               {!leadCaptured ? (
                 <LeadForm
-                  calculadora="Ahorro por automatización del aire acondicionado"
-                  resultados={{ ahorroMensualBajo: savingsLow, ahorroMensualAlto: savingsHigh }}
+                  payload={{
+                    calculatorType: "Automatización A/C",
+                    calculationData: [
+                      `Tipo de inmueble: ${building?.label ?? "N/D"}`,
+                      `Gasto mensual de energía: ${fmt(cost)}`,
+                      `% asociado a A/C: ${hvacPercent[0]}%`,
+                      `Gasto en climatización: ${fmt(hvacCost)}`,
+                      `Operación: ${hoursDay} h/día, ${daysWeek} días/semana`,
+                      `Nivel de control actual: ${control?.label ?? "N/D"}`,
+                      `Variadores de velocidad: ${yesNo(hasVFD)}`,
+                    ].join("\n"),
+                    monthlySavings: `${fmt(savingsLow)} — ${fmt(savingsHigh)}`,
+                    annualSavings: `${fmt(annualLow)} — ${fmt(annualHigh)}`,
+                    roi: inv > 0 ? `${roiLow.toFixed(0)} a ${roiHigh.toFixed(0)} meses` : "No especificado",
+                    investment: inv > 0 ? fmt(inv) : "No especificado",
+                  }}
                   onComplete={() => setLeadCaptured(true)}
                 />
               ) : (
@@ -562,7 +587,27 @@ function CalcAlmacenamiento() {
                 </div>
               </div>
               {!leadCaptured ? (
-                <LeadForm calculadora="Reducción de demanda con almacenamiento térmico" resultados={{ ahorroMensualBajo: totalSavingsLow, ahorroMensualAlto: totalSavingsHigh }} onComplete={() => setLeadCaptured(true)} />
+                <LeadForm
+                  payload={{
+                    calculatorType: "Almacenamiento Térmico",
+                    calculationData: [
+                      `Gasto mensual de energía: ${fmt(parseFloat(monthlyCost.replace(/,/g, "")) || 0)}`,
+                      `Demanda máxima: ${fmtNum(peak)} kW`,
+                      `Cargo por demanda: ${fmt(charge)}/kW-mes`,
+                      `Capacidad instalada: ${fmtNum(capacity)} TR`,
+                      `% de carga a desplazar: ${shiftPercent[0]}%`,
+                      `Horas de descarga: ${hours}`,
+                      `Condición del sistema: ${condition?.label ?? "N/D"}`,
+                      `Carga desplazada: ${fmtNum(shiftedTons)} TR`,
+                      `Reducción de demanda: ${fmtNum(demandReduction)} kW`,
+                    ].join("\n"),
+                    monthlySavings: `${fmt(totalSavingsLow)} — ${fmt(totalSavingsHigh)}`,
+                    annualSavings: `${fmt(annualLow)} — ${fmt(annualHigh)}`,
+                    roi: inv > 0 ? `${roiLow.toFixed(0)} a ${roiHigh.toFixed(0)} meses` : "No especificado",
+                    investment: inv > 0 ? fmt(inv) : "No especificado",
+                  }}
+                  onComplete={() => setLeadCaptured(true)}
+                />
               ) : (
                 <div className="bg-accent/10 border border-accent/30 p-6 rounded-sm text-center">
                   <CheckCircle className="w-10 h-10 text-accent mx-auto mb-3" />
@@ -758,7 +803,29 @@ function CalcPlanta() {
                 </div>
               </div>
               {!leadCaptured ? (
-                <LeadForm calculadora="Optimización de planta de agua helada" resultados={{ ahorroMensualBajo: monthlyLow, ahorroMensualAlto: monthlyHigh }} onComplete={() => setLeadCaptured(true)} />
+                <LeadForm
+                  payload={{
+                    calculatorType: "Planta Agua Helada",
+                    calculationData: [
+                      `Capacidad en operación: ${fmtNum(tons)} TR`,
+                      `Horas de operación al año: ${hours}`,
+                      `Consumo actual: ${kw} kW/TR`,
+                      `Costo de energía: ${cost} MXN/kWh`,
+                      `ΔT actual: ${currentDT || "N/D"} °F / ΔT diseño: ${designDT} °F`,
+                      `Bombas con variador: ${yesNo(hasVFD)}`,
+                      `Medición/tendencias: ${yesNo(hasTrends)}`,
+                      `Condición principal: ${condition?.label ?? "N/D"}`,
+                      `Consumo anual estimado: ${fmtNum(annualConsumption)} kWh`,
+                      `Costo anual de operación: ${fmt(annualCost)}`,
+                      `Alerta baja ΔT: ${lowDT ? "Sí" : "No"}`,
+                    ].join("\n"),
+                    monthlySavings: `${fmt(monthlyLow)} — ${fmt(monthlyHigh)}`,
+                    annualSavings: `${fmt(savingsLow)} — ${fmt(savingsHigh)}`,
+                    roi: inv > 0 ? `${roiLow.toFixed(0)} a ${roiHigh.toFixed(0)} meses` : "No especificado",
+                    investment: inv > 0 ? fmt(inv) : "No especificado",
+                  }}
+                  onComplete={() => setLeadCaptured(true)}
+                />
               ) : (
                 <div className="bg-accent/10 border border-accent/30 p-6 rounded-sm text-center">
                   <CheckCircle className="w-10 h-10 text-accent mx-auto mb-3" />
