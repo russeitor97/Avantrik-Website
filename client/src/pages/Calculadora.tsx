@@ -898,7 +898,7 @@ export default function Calculadora() {
 
           <TabsContent value="automatizacion">
             <div className="mb-6">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Ahorro por Automatización del Aire Acondicionado</h2>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Estimador de Ahorro por Automatización HVAC (BMS/BAS)</h2>
               <p className="text-muted-foreground">Calcula el ahorro potencial al controlar horarios, ventilación, economizadores, válvulas, variadores y puntos de operación desde un sistema BMS/EMS.</p>
             </div>
             <CalcAutomatizacion />
@@ -914,7 +914,7 @@ export default function Calculadora() {
 
           <TabsContent value="planta">
             <div className="mb-6">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Optimización de Planta de Agua Helada</h2>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Estimador de Ahorro por Optimización de Planta de Agua Helada</h2>
               <p className="text-muted-foreground">Estima el ahorro por mejorar operación de chillers, bombas, temperaturas, horarios y secuencias de control.</p>
             </div>
             <CalcPlanta />
