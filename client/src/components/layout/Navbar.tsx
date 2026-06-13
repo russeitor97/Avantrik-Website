@@ -22,10 +22,11 @@ export function Navbar() {
   const navLinks = [
     { name: "Inicio", href: "/" },
     { name: "Nosotros", href: "/about" },
-    { name: "Auditorías", href: "/services/energy-audits" },
-    { name: "HVAC Industrial", href: "/services/industrial-hvac" },
-    { name: "Ing. Eléctrica", href: "/services/electrical-engineering" },
-    { name: "Geotermia", href: "/services/geothermal-systems" },
+    { name: "Auditorías", href: "/auditoria-energetica" },
+    { name: "HVAC Industrial", href: "/hvac-industrial" },
+    { name: "Ing. Eléctrica", href: "/ingenieria-electrica" },
+    { name: "Geotermia", href: "/geotermia" },
+    { name: "Calculadora", href: "/calculadora-ahorro" },
     { name: "Contacto", href: "/contact" },
   ];
 
@@ -35,15 +36,15 @@ export function Navbar() {
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b",
         isScrolled
           ? "bg-white/10 backdrop-blur-md border-white/20 py-4 shadow-lg"
-          : "bg-transparent border-transparent py-6"
+          : "bg-transparent border-transparent py-6",
       )}
     >
       <div className="container mx-auto px-4 flex items-center justify-between">
         <Link href="/">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <img 
-              src={logo} 
-              alt="Avantrik Logo" 
+          <a className="flex items-center gap-3 group">
+            <img
+              src={logo}
+              alt="Avantrik Logo"
               className="w-10 h-10 object-contain brightness-110 contrast-125"
             />
             <div className="flex flex-col">
@@ -54,29 +55,32 @@ export function Navbar() {
                 Soluciones de Ingeniería
               </span>
             </div>
-          </div>
+          </a>
         </Link>
 
         {/* Desktop Nav */}
         <div className="hidden lg:flex items-center gap-8">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
-              <span
+              <a
                 className={cn(
-                  "text-sm font-medium transition-colors hover:text-accent uppercase tracking-wide cursor-pointer",
+                  "text-sm font-medium transition-colors hover:text-accent uppercase tracking-wide",
                   location === link.href
                     ? "text-accent font-semibold"
                     : isScrolled
-                    ? "text-foreground"
-                    : "text-foreground/90 hover:text-foreground"
+                      ? "text-foreground"
+                      : "text-foreground/90 hover:text-foreground",
                 )}
               >
                 {link.name}
-              </span>
+              </a>
             </Link>
           ))}
           <Link href="/contact">
-            <Button size="sm" className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wider rounded-sm">
+            <Button
+              size="sm"
+              className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wider rounded-sm"
+            >
               Cotizar
             </Button>
           </Link>
@@ -96,20 +100,23 @@ export function Navbar() {
         <div className="lg:hidden absolute top-full left-0 right-0 bg-background border-b border-border p-4 flex flex-col gap-4 shadow-lg animate-in slide-in-from-top-5">
           {navLinks.map((link) => (
             <Link key={link.href} href={link.href}>
-              <span
+              <a
                 className={cn(
-                  "text-lg font-medium py-2 border-b border-border/50 cursor-pointer",
-                  location === link.href ? "text-accent" : "text-foreground"
+                  "text-lg font-medium py-2 border-b border-border/50",
+                  location === link.href ? "text-accent" : "text-foreground",
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 {link.name}
-              </span>
+              </a>
             </Link>
           ))}
           <Link href="/contact">
-             <Button className="w-full bg-accent text-accent-foreground font-bold uppercase rounded-sm mt-2" onClick={() => setMobileMenuOpen(false)}>
-              Request Audit
+            <Button
+              className="w-full bg-accent text-accent-foreground font-bold uppercase rounded-sm mt-2"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Solicitar Auditoría
             </Button>
           </Link>
         </div>

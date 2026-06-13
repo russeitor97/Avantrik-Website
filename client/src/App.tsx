@@ -12,6 +12,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
 import Contact from "@/pages/Contact";
+import Calculadora from "@/pages/Calculadora";
 
 // Services
 import EnergyAudits from "@/pages/Services/EnergyAudits";
@@ -26,6 +27,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/about" component={About} />
       <Route path="/contact" component={Contact} />
+      <Route path="/calculadora-ahorro" component={Calculadora} />
 
       {/* SEO URLs (OFICIALES) */}
       <Route path="/auditoria-energetica" component={EnergyAudits} />
@@ -36,8 +38,14 @@ function Router() {
       {/* URLs antiguas / técnicas (alias temporales) */}
       <Route path="/services/energy-audits" component={EnergyAudits} />
       <Route path="/services/industrial-hvac" component={IndustrialHVAC} />
-      <Route path="/services/electrical-engineering" component={ElectricalEngineering} />
-      <Route path="/services/geothermal-systems" component={GeothermalSystems} />
+      <Route
+        path="/services/electrical-engineering"
+        component={ElectricalEngineering}
+      />
+      <Route
+        path="/services/geothermal-systems"
+        component={GeothermalSystems}
+      />
 
       {/* 404 */}
       <Route component={NotFound} />
