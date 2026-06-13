@@ -82,10 +82,10 @@ function LeadForm({ calculadora, resultados, onComplete }: {
 
   async function onSubmit(values: z.infer<typeof leadSchema>) {
     setSending(true);
-    const mensaje =
-      `Lead capturado desde la Calculadora de Ahorro (${calculadora}).\n\n` +
-      `Ciudad: ${values.ciudad}\n` +
-      `Ahorro mensual estimado: ${fmt(resultados.ahorroMensualBajo)} – ${fmt(resultados.ahorroMensualAlto)}`;
+
+    // El ahorro viene del prop `resultados` (rango bajo–alto), no del formulario.
+    const ahorroMensual = `${fmt(resultados.ahorroMensualBajo)} – ${fmt(resultados.ahorroMensualAlto)}`;
+    const ahorroAnual = `${fmt(resultados.ahorroMensualBajo * 12)} – ${fmt(resultados.ahorroMensualAlto * 12)}`;
 
     try {
       await emailjs.send(
@@ -96,8 +96,10 @@ function LeadForm({ calculadora, resultados, onComplete }: {
           company: values.empresa,
           from_email: values.correo,
           phone: values.telefono,
-          service: `Calculadora de Ahorro — ${calculadora}`,
-          message: mensaje,
+          city: values.ciudad,
+          calculadora,
+          ahorroMensual,
+          ahorroAnual,
           reply_to: values.correo,
         },
         EMAILJS_PUBLIC_KEY,
