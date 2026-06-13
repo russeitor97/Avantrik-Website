@@ -10,5 +10,17 @@
 /blank-3    410
 /diagnostico 410
 
+# === URLs VIEJAS DE WIX → PÁGINAS REALES (301) ===
+/acerca-de-nosotros                          /about              301
+/geotermia-empresarial                       /geotermia          301
+/copia-de-hvac                               /hvac-industrial    301
+/copia-de-baja-y-media-tension               /ingenieria-electrica 301
+/service-page/agenda-tu-sesion-de-diagnostico  /contact          301
+/service-page/agenda-tu-sesión-de-diagnóstico  /contact          301
+/services-6                                  /                   301
+
+# === BASURA DE WIX SIN EQUIVALENTE (410 = eliminada) ===
+/blank-2     410
+
 # SPA FALLBACK (obligatorio para React, va al final)
 /*  /index.html  200
