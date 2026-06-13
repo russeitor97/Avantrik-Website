@@ -17,7 +17,7 @@ import emailjs from "@emailjs/browser";
 
 // ── EmailJS config (template dedicado de leads de Calculadora) ──
 const EMAILJS_SERVICE_ID = "service_wjgwyix";
-const EMAILJS_TEMPLATE_ID = "template_hea7h9x";
+const EMAILJS_TEMPLATE_ID = "template_qix256c";
 const EMAILJS_PUBLIC_KEY = "UL19pglSyFo2jCc8s";
 // ─────────────────────────────────────────────────────────────────
 
