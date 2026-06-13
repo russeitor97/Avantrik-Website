@@ -522,7 +522,7 @@ function CalcAlmacenamiento() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Horas de enfriamiento a cubrir con almacenamiento</Label>
+              <Label className="text-sm font-medium">Horas por día a cubrir con almacenamiento térmico</Label>
               <Input type="number" placeholder="Ej. 6" value={dischargeHours} onChange={e => setDischargeHours(e.target.value)} className="bg-background" />
             </div>
 
@@ -583,7 +583,7 @@ function CalcAlmacenamiento() {
                   )}
                 </div>
                 <div className="bg-primary/5 p-4 rounded-sm border border-primary/10">
-                  <p className="text-sm text-muted-foreground">Almacenamiento parcial recomendado. Permite reducir la demanda pico sin reemplazar los chillers existentes.</p>
+                  <p className="text-sm text-muted-foreground">Almacenamiento parcial recomendado. Permite reducir la demanda pico sin reemplazar los chillers bajo ciertas condiciones.</p>
                 </div>
               </div>
               {!leadCaptured ? (
@@ -697,7 +697,7 @@ function CalcPlanta() {
             <div className="space-y-2">
               <Label className="text-sm font-medium">Consumo actual estimado del sistema (kW por tonelada)</Label>
               <Input type="text" placeholder="Ej. 1.10" value={kwPerTon} onChange={e => setKwPerTon(e.target.value)} className="bg-background" />
-              <p className="text-xs text-muted-foreground">Si no conoces este dato, usa 1.10 como referencia.</p>
+              <p className="text-xs text-muted-foreground">Eficiencia estimada actual del chiller, expresada en kW/ton: kilowatts absorbidos por tonelada de refrigeración producida. Si no conoces este dato, usa 1.10 como referencia.</p>
             </div>
 
             <div className="space-y-2">
@@ -705,6 +705,7 @@ function CalcPlanta() {
               <Input type="text" placeholder="Ej. 2.20" value={energyCost} onChange={e => setEnergyCost(e.target.value)} className="bg-background" />
             </div>
 
+            <p className="text-sm font-semibold text-foreground">ΔT ACTUAL DEL AGUA HELADA EN EL CHILLER (SALIDA-ENTRADA)</p>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label className="text-sm font-medium">ΔT actual del agua helada (°F)</Label>
@@ -898,15 +899,15 @@ export default function Calculadora() {
           <TabsContent value="automatizacion">
             <div className="mb-6">
               <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Ahorro por Automatización del Aire Acondicionado</h2>
-              <p className="text-muted-foreground">Estima ahorros por horarios inteligentes, control automático, arranques escalonados, variadores de velocidad y mejores ajustes de operación.</p>
+              <p className="text-muted-foreground">Calcula el ahorro potencial al controlar horarios, ventilación, economizadores, válvulas, variadores y puntos de operación desde un sistema BMS/EMS.</p>
             </div>
             <CalcAutomatizacion />
           </TabsContent>
 
           <TabsContent value="almacenamiento">
             <div className="mb-6">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Reducción de Demanda con Almacenamiento Térmico</h2>
-              <p className="text-muted-foreground">Estima cuánto enfriamiento podrías mover a otro horario y cuánto podrías reducir tu demanda eléctrica pico.</p>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Estimador de Ahorro con Almacenamiento Térmico / TES</h2>
+              <p className="text-muted-foreground">Estima el potencial de ahorro al producir almacenamiento térmico con hielo (TES) en horarios de menor costo y usar esa energía térmica durante horas punta.</p>
             </div>
             <CalcAlmacenamiento />
           </TabsContent>
