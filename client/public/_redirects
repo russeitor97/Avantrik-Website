@@ -1,15 +1,14 @@
-# REDIRECTS DE URLs VIEJAS (ESPAÑOL) A URLs NUEVAS (INGLÉS)
+# REDIRECTS: URLs viejas en inglés → URLs oficiales en español (301)
+/services/energy-audits          /auditoria-energetica       301
+/services/industrial-hvac        /hvac-industrial            301
+/services/electrical-engineering /ingenieria-electrica       301
+/services/geothermal-systems     /geotermia                  301
 
-/auditoria-energetica        /services/energy-audits              301
-/hvac-industrial             /services/industrial-hvac            301
-/ingenieria-electrica        /services/electrical-engineering     301
-/geotermia                   /services/geothermal-systems         301
+# ELIMINAR URLs basura / Wix viejas
+/blank      410
+/blank-1    410
+/blank-3    410
+/diagnostico 410
 
-# ELIMINAR URLs BASURA / WIX
-/blank                       410
-/blank-1                     410
-/blank-3                     410
-/diagnostico                 410
-
-# SPA FALLBACK (OBLIGATORIO PARA REACT)
- /*                          /index.html                          200
+# SPA FALLBACK (obligatorio para React, va al final)
+/*  /index.html  200

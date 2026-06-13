@@ -18,28 +18,28 @@ export default function Home() {
       title: "Auditorías Energéticas",
       description: "Análisis exhaustivo del consumo energético de su instalación con estrategias de optimización basadas en datos.",
       icon: Activity,
-      href: "/services/energy-audits",
+      href: "/auditoria-energetica",
       image: energyImage
     },
     {
       title: "HVAC Industrial",
       description: "Sistemas de control climático de alto rendimiento diseñados para entornos industriales complejos y plantas de fabricación.",
       icon: Wind,
-      href: "/services/industrial-hvac",
+      href: "/hvac-industrial",
       image: hvacImage
     },
     {
       title: "Ingeniería Eléctrica",
       description: "Planeación, instalación y modernización de infraestructura eléctrica avanzada de baja y media tensión.",
       icon: Zap,
-      href: "/services/electrical-engineering",
+      href: "/ingenieria-electrica",
       image: electricalImage
     },
     {
       title: "Sistemas Geotérmicos",
       description: "Soluciones de calefacción y refrigeración sostenibles que aprovechan la energía térmica subterránea para una eficiencia a largo plazo.",
       icon: Cpu, // Using Cpu as a placeholder for complex tech/system
-      href: "/services/geothermal-systems",
+      href: "/geotermia",
       image: geothermalImage
     }
   ];

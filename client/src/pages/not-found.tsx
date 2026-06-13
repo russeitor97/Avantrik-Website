@@ -1,21 +1,52 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Helmet } from "react-helmet-async";
+import { Layout } from "@/components/layout/Layout";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
+import { Home, Mail } from "lucide-react";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">404 Page Not Found</h1>
-          </div>
+    <Layout>
+      <Helmet>
+        <title>Página no encontrada | Avantrik</title>
+        <meta name="robots" content="noindex" />
+      </Helmet>
 
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
+      <section className="relative bg-primary text-primary-foreground min-h-[70vh] flex items-center overflow-hidden">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
+        <div className="container mx-auto px-4 relative z-10 text-center">
+          <p className="text-7xl md:text-9xl font-heading font-bold text-accent leading-none">
+            404
           </p>
-        </CardContent>
-      </Card>
-    </div>
+          <h1 className="text-3xl md:text-4xl font-heading font-bold mt-4 mb-4">
+            Página no encontrada
+          </h1>
+          <p className="text-lg text-primary-foreground/70 max-w-xl mx-auto mb-10">
+            La página que buscas no existe o fue movida. Verifica la dirección o
+            regresa al inicio para seguir explorando nuestras soluciones de
+            ingeniería.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/">
+              <Button
+                size="lg"
+                className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wide h-14 px-8"
+              >
+                <Home className="w-5 h-5 mr-2" /> Volver al inicio
+              </Button>
+            </Link>
+            <Link href="/contact">
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-bold uppercase tracking-wide h-14 px-8"
+              >
+                <Mail className="w-5 h-5 mr-2" /> Contáctanos
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </section>
+    </Layout>
   );
 }

@@ -17,7 +17,7 @@ export default function GeothermalSystems() {
 
         <link
           rel="canonical"
-          href="https://www.avantrik.com/services/geothermal-systems"
+          href="https://www.avantrik.com/geotermia"
         />
       </Helmet>
 

@@ -17,7 +17,7 @@ export default function ElectricalEngineering() {
 
         <link
           rel="canonical"
-          href="https://www.avantrik.com/services/electrical-engineering"
+          href="https://www.avantrik.com/ingenieria-electrica"
         />
       </Helmet>
 

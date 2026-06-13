@@ -17,7 +17,7 @@ export default function IndustrialHVAC() {
 
         <link
           rel="canonical"
-          href="https://www.avantrik.com/services/industrial-hvac"
+          href="https://www.avantrik.com/hvac-industrial"
         />
       </Helmet>
 

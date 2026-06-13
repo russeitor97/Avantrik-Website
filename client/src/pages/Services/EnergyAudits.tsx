@@ -17,7 +17,7 @@ export default function EnergyAudits() {
 
         <link
           rel="canonical"
-          href="https://www.avantrik.com/services/energy-audits"
+          href="https://www.avantrik.com/auditoria-energetica"
         />
       </Helmet>
 

@@ -29,23 +29,11 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/calculadora-ahorro" component={Calculadora} />
 
-      {/* SEO URLs (OFICIALES) */}
+      {/* SEO URLs (OFICIALES, en español) */}
       <Route path="/auditoria-energetica" component={EnergyAudits} />
       <Route path="/hvac-industrial" component={IndustrialHVAC} />
       <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
       <Route path="/geotermia" component={GeothermalSystems} />
-
-      {/* URLs antiguas / técnicas (alias temporales) */}
-      <Route path="/services/energy-audits" component={EnergyAudits} />
-      <Route path="/services/industrial-hvac" component={IndustrialHVAC} />
-      <Route
-        path="/services/electrical-engineering"
-        component={ElectricalEngineering}
-      />
-      <Route
-        path="/services/geothermal-systems"
-        component={GeothermalSystems}
-      />
 
       {/* 404 */}
       <Route component={NotFound} />
