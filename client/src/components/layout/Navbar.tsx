@@ -36,37 +36,47 @@ export function Navbar() {
   ];
 
   // Subtle dark glow keeps white text legible over any background while the
-  // glass itself stays very transparent.
+  // glass stays very transparent.
   const textGlow = "[text-shadow:0_1px_12px_rgba(2,6,23,0.55)]";
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50">
-      <div className="container mx-auto px-4">
-        {/* Floating liquid-glass capsule — rounded + very transparent */}
-        <div
-          className={cn(
-            "relative mt-3 flex items-center justify-between gap-4 rounded-full border border-white/15 px-4 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 md:px-5",
-            isScrolled
-              ? "bg-ink/30 py-2 shadow-[0_14px_40px_-14px_rgba(2,6,23,0.5)]"
-              : "bg-ink/15 py-2.5",
-          )}
-        >
-          {/* top highlight, clipped to the rounded shape */}
-          <span
-            className="pointer-events-none absolute inset-0 rounded-full bg-gradient-to-b from-white/15 to-transparent"
-            aria-hidden="true"
-          />
+      {/* Full-width liquid-glass bar — square, very transparent */}
+      <div
+        className={cn(
+          "relative border-b border-white/10 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300",
+          isScrolled
+            ? "bg-ink/30 py-3 shadow-[0_10px_30px_-12px_rgba(2,6,23,0.45)]"
+            : "bg-ink/15 py-5",
+        )}
+      >
+        {/* specular edge-light along the top */}
+        <span
+          className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/55 to-transparent"
+          aria-hidden="true"
+        />
+        {/* soft sheen */}
+        <span
+          className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"
+          aria-hidden="true"
+        />
 
+        <div className="container relative mx-auto flex items-center justify-between px-4">
           <Link href="/">
-            <a className={cn("group relative flex items-center gap-2.5", textGlow)}>
+            <a className={cn("group flex items-center gap-3", textGlow)}>
               <img
                 src={logo}
                 alt="Avantrik Logo"
-                className="h-9 w-9 object-contain transition-transform duration-300 group-hover:scale-105"
+                className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-105"
               />
-              <span className="font-heading text-xl font-bold leading-none tracking-tight text-white">
-                AVANTRIK
-              </span>
+              <div className="flex flex-col">
+                <span className="font-heading text-2xl font-bold leading-none tracking-tight text-white">
+                  AVANTRIK
+                </span>
+                <span className="text-[10px] font-medium uppercase tracking-widest text-white/60">
+                  Soluciones de Ingeniería
+                </span>
+              </div>
             </a>
           </Link>
 
@@ -78,7 +88,7 @@ export function Navbar() {
                 <Link key={link.href} href={link.href}>
                   <a
                     className={cn(
-                      "group relative text-[13px] font-medium uppercase tracking-wide transition-colors",
+                      "group relative text-sm font-medium uppercase tracking-wide transition-colors",
                       textGlow,
                       active ? "text-accent" : "text-white/85 hover:text-white",
                     )}
@@ -136,32 +146,30 @@ export function Navbar() {
         </div>
       </div>
 
-      {/* Mobile Menu — dark glass panel */}
+      {/* Mobile Menu — full-width dark glass panel */}
       {mobileMenuOpen && (
-        <div className="container mx-auto px-4 lg:hidden">
-          <div className="mt-2 flex flex-col gap-1 rounded-2xl border border-white/10 bg-ink/85 p-4 shadow-[0_20px_40px_-16px_rgba(2,6,23,0.6)] backdrop-blur-2xl backdrop-saturate-150 animate-in slide-in-from-top-4">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <a
-                  className={cn(
-                    "border-b border-white/10 py-2 text-lg font-medium",
-                    location === link.href ? "text-accent" : "text-white/90",
-                  )}
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  {link.name}
-                </a>
-              </Link>
-            ))}
-            <Link href="/contact">
-              <Button
-                className="mt-2 w-full rounded-full bg-accent font-bold uppercase text-accent-foreground"
+        <div className="absolute inset-x-0 top-full flex flex-col gap-1 border-b border-white/10 bg-ink/85 p-4 shadow-[0_20px_40px_-16px_rgba(2,6,23,0.6)] backdrop-blur-2xl backdrop-saturate-150 lg:hidden animate-in slide-in-from-top-4">
+          {navLinks.map((link) => (
+            <Link key={link.href} href={link.href}>
+              <a
+                className={cn(
+                  "border-b border-white/10 py-2 text-lg font-medium",
+                  location === link.href ? "text-accent" : "text-white/90",
+                )}
                 onClick={() => setMobileMenuOpen(false)}
               >
-                Solicitar Auditoría
-              </Button>
+                {link.name}
+              </a>
             </Link>
-          </div>
+          ))}
+          <Link href="/contact">
+            <Button
+              className="mt-2 w-full rounded-full bg-accent font-bold uppercase text-accent-foreground"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Solicitar Auditoría
+            </Button>
+          </Link>
         </div>
       )}
     </nav>
