@@ -1,5 +1,3 @@
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,44 +7,49 @@ interface ServiceCardProps {
   description: string;
   icon: LucideIcon;
   href: string;
-  image: string;
+  /** Optional — kept for API compatibility; no longer rendered as a photo. */
+  image?: string;
   className?: string;
 }
 
-export function ServiceCard({ title, description, icon: Icon, href, image, className }: ServiceCardProps) {
+export function ServiceCard({
+  title,
+  description,
+  icon: Icon,
+  href,
+  className,
+}: ServiceCardProps) {
   return (
     <Link href={href}>
-      <a className={cn("block group h-full", className)}>
-        <Card className="h-full border-none shadow-lg overflow-hidden flex flex-col bg-card hover:shadow-xl transition-all duration-300 hover:-translate-y-1 rounded-sm">
-          <div className="relative h-48 overflow-hidden">
-            <div 
-              className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-              style={{ backgroundImage: `url(${image})` }}
-            />
-            <div className="absolute inset-0 bg-primary/60 group-hover:bg-primary/40 transition-colors duration-300" />
-            <div className="absolute bottom-4 left-4 bg-accent text-accent-foreground p-3 rounded-sm shadow-md">
-              <Icon className="w-6 h-6" />
+      <a className={cn("group block h-full", className)}>
+        <div className="relative flex h-full flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-accent/40 hover:shadow-xl">
+          {/* Icon header on navy with brand grid */}
+          <div className="relative overflow-hidden bg-primary p-6">
+            <div className="absolute inset-0 bg-tech-grid opacity-40" />
+            <div className="relative flex items-center justify-between">
+              <span className="inline-flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground shadow-md transition-transform duration-300 group-hover:scale-110">
+                <Icon className="h-6 w-6" />
+              </span>
+              <ArrowRight className="h-5 w-5 text-white/40 transition-all duration-300 group-hover:translate-x-1 group-hover:text-accent" />
             </div>
           </div>
-          
-          <CardHeader className="pt-6">
-            <CardTitle className="font-heading text-xl uppercase font-bold text-foreground group-hover:text-accent transition-colors">
+
+          {/* Accent rule */}
+          <div className="h-1 w-full bg-gradient-to-r from-accent to-accent/0" />
+
+          <div className="flex flex-grow flex-col p-6">
+            <h3 className="font-heading text-xl font-bold uppercase text-foreground transition-colors group-hover:text-accent">
               {title}
-            </CardTitle>
-          </CardHeader>
-          
-          <CardContent className="flex-grow">
-            <CardDescription className="text-muted-foreground leading-relaxed">
+            </h3>
+            <p className="mt-3 flex-grow leading-relaxed text-muted-foreground">
               {description}
-            </CardDescription>
-          </CardContent>
-          
-          <CardFooter className="pb-6 pt-0">
-            <span className="text-sm font-bold text-primary flex items-center group-hover:text-accent transition-colors uppercase">
-              MÁS INFORMACIÓN <ArrowRight className="ml-2 w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </p>
+            <span className="mt-6 inline-flex items-center text-sm font-bold uppercase text-primary transition-colors group-hover:text-accent">
+              Más información
+              <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </span>
-          </CardFooter>
-        </Card>
+          </div>
+        </div>
       </a>
     </Link>
   );

@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { useState } from "react";
 import { Calculator, TrendingDown, Zap, Thermometer, Snowflake, ArrowRight, CheckCircle, Building2, Factory, Hotel, Briefcase, HelpCircle, Send } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -881,9 +882,9 @@ export default function Calculadora() {
       </Helmet>
 
       {/* Hero */}
-      <section className="relative bg-primary text-primary-foreground py-16 overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
-        <div className="container mx-auto px-4 relative z-10">
+      <section className="relative bg-ink-gradient text-primary-foreground py-20 overflow-hidden">
+        <TechBackdrop />
+        <div className="container mx-auto px-4 relative z-10 pt-20">
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-5 h-5 text-accent" />

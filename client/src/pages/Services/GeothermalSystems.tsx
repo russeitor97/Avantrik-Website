@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Cpu, Sprout, ArrowDownCircle } from "lucide-react";
-import geothermalImage from "@assets/generated_images/industrial_geothermal_system_visualization.png";
+import { TechBackdrop } from "@/components/ui/tech-backdrop";
 
 export default function GeothermalSystems() {
   return (
@@ -21,11 +21,9 @@ export default function GeothermalSystems() {
         />
       </Helmet>
 
-      <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
-        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${geothermalImage})` }}>
-          <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
-        </div>
-        <div className="container mx-auto px-4 relative z-10 pt-20">
+      <div className="relative flex h-[52vh] min-h-[420px] items-center overflow-hidden bg-ink-gradient">
+        <TechBackdrop />
+        <div className="container mx-auto px-4 relative z-10 pt-24">
             <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Sistemas Geotérmicos Industriales</h1>
             <p className="text-xl text-gray-200 max-w-2xl">Sistemas geotérmicos industriales para calefacción y refrigeración de edificios y plantas,
               enfocados en eficiencia energética, reducción de costos operativos y sostenibilidad a largo plazo.</p>

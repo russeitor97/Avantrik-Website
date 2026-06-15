@@ -3,6 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { Home, Mail } from "lucide-react";
+import { TechBackdrop } from "@/components/ui/tech-backdrop";
 
 export default function NotFound() {
   return (
@@ -12,9 +13,9 @@ export default function NotFound() {
         <meta name="robots" content="noindex" />
       </Helmet>
 
-      <section className="relative bg-primary text-primary-foreground min-h-[70vh] flex items-center overflow-hidden">
-        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none" />
-        <div className="container mx-auto px-4 relative z-10 text-center">
+      <section className="relative bg-ink-gradient text-primary-foreground min-h-[80vh] flex items-center overflow-hidden">
+        <TechBackdrop />
+        <div className="container mx-auto px-4 relative z-10 text-center pt-24">
           <p className="text-7xl md:text-9xl font-heading font-bold text-accent leading-none">
             404
           </p>

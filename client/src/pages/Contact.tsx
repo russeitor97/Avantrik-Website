@@ -1,8 +1,9 @@
 import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { ContactForm } from "@/components/contact-form";
-import { MapPin, Phone, Mail, Clock, Linkedin } from "lucide-react";
+import { Phone, Mail, Linkedin } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { TechBackdrop } from "@/components/ui/tech-backdrop";
 
 export default function Contact() {
   return (
@@ -20,10 +21,11 @@ export default function Contact() {
         />
       </Helmet>
 
-      <div className="bg-secondary/30 py-16">
-        <div className="container mx-auto px-4 text-center">
-           <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4">Contacto</h1>
-           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+      <div className="relative flex min-h-[38vh] items-center overflow-hidden bg-ink-gradient py-16">
+        <TechBackdrop />
+        <div className="container relative z-10 mx-auto px-4 pt-24 text-center">
+           <h1 className="mb-4 text-4xl font-heading font-bold text-white md:text-5xl">Contacto</h1>
+           <p className="mx-auto max-w-2xl text-xl text-gray-300">
              ¿Listo para optimizar su instalación? Póngase en contacto con nuestro equipo de ingeniería para una consulta o cotización.
            </p>
         </div>

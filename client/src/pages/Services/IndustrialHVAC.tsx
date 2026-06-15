@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Wind, Thermometer, Fan, Gauge } from "lucide-react";
-import hvacImage from "@assets/generated_images/large_scale_industrial_hvac_systems_on_rooftop.png";
+import { TechBackdrop } from "@/components/ui/tech-backdrop";
 
 export default function IndustrialHVAC() {
   return (
@@ -21,11 +21,9 @@ export default function IndustrialHVAC() {
         />
       </Helmet>
 
-      <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
-        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${hvacImage})` }}>
-          <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
-        </div>
-        <div className="container mx-auto px-4 relative z-10 pt-20">
+      <div className="relative flex h-[52vh] min-h-[420px] items-center overflow-hidden bg-ink-gradient">
+        <TechBackdrop />
+        <div className="container mx-auto px-4 relative z-10 pt-24">
             <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">HVAC Industrial para Plantas y Edificios Industriales
 </h1>
             <p className="text-xl text-gray-200 max-w-2xl"><p className="text-xl text-gray-200 max-w-2xl">

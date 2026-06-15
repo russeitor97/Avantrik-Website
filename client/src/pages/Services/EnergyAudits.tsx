@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle, Activity, BarChart3, Settings, TrendingUp } from "lucide-react";
-import energyImage from "@assets/generated_images/digital_energy_audit_tablet_in_factory_setting.png";
+import { TechBackdrop } from "@/components/ui/tech-backdrop";
 
 export default function EnergyAudits() {
   return (
@@ -21,11 +21,9 @@ export default function EnergyAudits() {
         />
       </Helmet>
 
-      <div className="relative h-[50vh] min-h-[400px] flex items-center overflow-hidden bg-primary">
-        <div className="absolute inset-0 z-0 bg-cover bg-center" style={{ backgroundImage: `url(${energyImage})` }}>
-          <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
-        </div>
-        <div className="container mx-auto px-4 relative z-10 pt-20">
+      <div className="relative flex h-[52vh] min-h-[420px] items-center overflow-hidden bg-ink-gradient">
+        <TechBackdrop />
+        <div className="container mx-auto px-4 relative z-10 pt-24">
             <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Auditorías Energéticas Industriales
 </h1>
             <p className="text-xl text-gray-200 max-w-2xl">Auditorías energéticas industriales basadas en datos para identificar desperdicios,
