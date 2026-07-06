@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { ArrowRight, CheckCircle, Activity, BarChart3, Settings, TrendingUp } from "lucide-react";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
+import { Stagger, StaggerItem } from "@/components/motion/Reveal";
 
 const audits = [
   { n: "01", title: "Auditoría Energética Preliminar (Walk-Through)", objetivo: "Diagnóstico rápido para identificar oportunidades de ahorro.", alcance: "Revisión de facturas CFE, inspección general, estimación inicial de ahorros." },
@@ -48,11 +49,11 @@ export default function EnergyAudits() {
             <h2 className="text-3xl font-heading font-bold text-foreground">AUDITORÍAS ENERGÉTICAS INDUSTRIALES Y CERTIFICACIONES DEL PERSONAL
 </h2>
             
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Stagger className="grid grid-cols-1 gap-4 sm:grid-cols-2" step={0.08}>
               {audits.map((a) => (
+                <StaggerItem key={a.n} className="h-full">
                 <div
-                  key={a.n}
-                  className="group relative flex flex-col rounded-sm border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-xl"
+                  className="group relative flex h-full flex-col rounded-sm border border-border bg-card p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent/60 hover:shadow-xl"
                 >
                   <div className="mb-3 flex items-start gap-3">
                     <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-sm bg-primary font-heading text-sm font-bold text-primary-foreground transition-colors duration-300 group-hover:bg-accent group-hover:text-accent-foreground">
@@ -69,8 +70,9 @@ export default function EnergyAudits() {
                     <strong className="font-semibold text-foreground">Alcance:</strong> {a.alcance}
                   </p>
                 </div>
+                </StaggerItem>
               ))}
-            </div>
+            </Stagger>
           </div>
 
           <div className="lg:col-span-1 space-y-8">

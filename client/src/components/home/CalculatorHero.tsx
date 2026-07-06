@@ -1,19 +1,39 @@
+import { useState } from "react";
 import { Link } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Calculator, ArrowRight, TrendingDown } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Calculator, ArrowRight, TrendingDown, Zap } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
-import { StatCounter } from "@/components/ui/stat-counter";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
+
+const fmt = (n: number) =>
+  n.toLocaleString("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 0,
+  });
 
 /**
  * Home protagonist section that drives visitors to the savings calculator.
- * Emotional hook + animated number (the site's existing 35% average-savings
- * stat) + a radial gauge + a large CTA to /calculadora-ahorro.
- * Visual only — links to the existing calculator page, no logic here.
+ * Includes a LIVE mini-estimator: the visitor drags a slider with their
+ * monthly energy spend and instantly sees a preliminary savings range.
+ *
+ * Assumptions mirror the official Calc 1 spec (Excel): HVAC share 35%
+ * (suggested industrial value) × 15–25% savings factor (manual control).
+ * This is only a marketing teaser — the real calculation lives in
+ * /calculadora-ahorro and is NOT modified here.
  */
 export function CalculatorHero() {
   const reduce = useReducedMotion();
+  const [monthlySpend, setMonthlySpend] = useState(800000);
+
+  const hvacCost = monthlySpend * 0.35; // % sugerido del gasto asociado a A/C
+  const savingsLow = hvacCost * 0.15; // factor bajo (control manual)
+  const savingsHigh = hvacCost * 0.25; // factor alto (control manual)
+
+  // Ancho de la barra "optimizado": reducción media del gasto de climatización
+  const optimizedPct = 100 - ((0.15 + 0.25) / 2) * 100; // 80%
 
   return (
     <section className="relative overflow-hidden bg-ink-gradient text-primary-foreground">
@@ -51,9 +71,9 @@ export function CalculatorHero() {
           </div>
         </Reveal>
 
-        {/* Animated gauge */}
+        {/* Live mini-estimator */}
         <Reveal delay={0.15} className="flex justify-center lg:justify-end">
-          <div className="relative w-full max-w-sm rounded-sm border border-accent/20 bg-primary/30 backdrop-blur-sm p-8 shadow-2xl">
+          <div className="relative w-full max-w-md rounded-sm border border-accent/20 bg-primary/30 backdrop-blur-sm p-7 shadow-2xl">
             <div className="flex items-center gap-2 text-accent">
               <TrendingDown className="w-5 h-5" />
               <span className="text-xs font-bold uppercase tracking-widest">
@@ -61,41 +81,86 @@ export function CalculatorHero() {
               </span>
             </div>
 
-            {/* Radial gauge (semicircle) */}
-            <div className="relative mt-4 flex flex-col items-center">
-              <svg viewBox="0 0 240 140" className="w-full" aria-hidden="true">
-                <path
-                  d="M20 130 A100 100 0 0 1 220 130"
-                  fill="none"
-                  stroke="hsl(var(--primary-foreground) / 0.12)"
-                  strokeWidth="16"
-                  strokeLinecap="round"
-                />
-                <motion.path
-                  d="M20 130 A100 100 0 0 1 220 130"
-                  fill="none"
-                  stroke="hsl(var(--accent))"
-                  strokeWidth="16"
-                  strokeLinecap="round"
-                  initial={reduce ? { pathLength: 0.35 } : { pathLength: 0 }}
-                  whileInView={{ pathLength: 0.35 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 1.6, ease: [0.22, 1, 0.36, 1] }}
-                />
-              </svg>
-
-              <div className="-mt-12 text-center">
-                <StatCounter
-                  to={35}
-                  suffix="%"
-                  duration={1.8}
-                  className="font-heading text-6xl font-bold text-white text-glow-accent"
-                />
-                <p className="mt-1 text-sm text-primary-foreground/60">
-                  ahorro energético promedio
-                </p>
+            {/* Slider: gasto mensual */}
+            <div className="mt-6">
+              <div className="flex items-baseline justify-between gap-4">
+                <label
+                  htmlFor="gasto-slider"
+                  className="text-sm text-primary-foreground/70"
+                >
+                  Tu gasto mensual de energía
+                </label>
+                <span className="font-heading text-xl font-bold text-white whitespace-nowrap">
+                  {fmt(monthlySpend)}
+                </span>
+              </div>
+              <Slider
+                id="gasto-slider"
+                value={[monthlySpend]}
+                onValueChange={(v) => setMonthlySpend(v[0])}
+                min={100000}
+                max={3000000}
+                step={50000}
+                className="mt-4"
+                aria-label="Gasto mensual de energía en pesos"
+              />
+              <div className="mt-1.5 flex justify-between text-[11px] text-primary-foreground/40">
+                <span>$100 mil</span>
+                <span>$3 millones</span>
               </div>
             </div>
+
+            {/* Resultado en vivo */}
+            <div className="mt-6 rounded-sm border border-accent/30 bg-accent/10 p-4">
+              <p className="text-xs uppercase tracking-wide font-medium text-primary-foreground/60 mb-1">
+                Podrías estar ahorrando
+              </p>
+              <p className="font-heading text-2xl md:text-3xl font-bold text-accent text-glow-accent whitespace-nowrap">
+                {fmt(savingsLow)} — {fmt(savingsHigh)}
+              </p>
+              <p className="mt-1 text-xs text-primary-foreground/50">
+                cada mes, solo en climatización
+              </p>
+            </div>
+
+            {/* Barras comparativas */}
+            <div className="mt-6 space-y-3" aria-hidden="true">
+              <div>
+                <div className="mb-1 flex justify-between text-[11px] uppercase tracking-wide text-primary-foreground/50">
+                  <span>Climatización hoy</span>
+                  <span>{fmt(hvacCost)}</span>
+                </div>
+                <div className="h-2.5 w-full rounded-full bg-primary-foreground/15">
+                  <div className="h-full w-full rounded-full bg-primary-foreground/40" />
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex justify-between text-[11px] uppercase tracking-wide text-accent/80">
+                  <span className="flex items-center gap-1">
+                    <Zap className="h-3 w-3" /> Con automatización
+                  </span>
+                  <span>≈ {fmt(hvacCost * (optimizedPct / 100))}</span>
+                </div>
+                <div className="h-2.5 w-full rounded-full bg-primary-foreground/15">
+                  <motion.div
+                    className="h-full rounded-full bg-accent"
+                    initial={false}
+                    animate={{ width: `${optimizedPct}%` }}
+                    transition={{ duration: reduce ? 0 : 0.6, ease: "easeOut" }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <p className="mt-5 text-[11px] leading-relaxed text-primary-foreground/40">
+              Estimación preliminar: 35% del gasto asociado a climatización y
+              control manual actual.{" "}
+              <Link href="/calculadora-ahorro">
+                <a className="text-accent underline-offset-2 hover:underline">
+                  Obtén tu cálculo detallado →
+                </a>
+              </Link>
+            </p>
           </div>
         </Reveal>
       </div>

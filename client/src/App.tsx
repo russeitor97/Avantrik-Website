@@ -2,42 +2,64 @@ import { HelmetProvider } from "react-helmet-async";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
+import { lazy, Suspense } from "react";
 
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-import NotFound from "@/pages/not-found";
-
-// Pages
+// Home se carga de inmediato (landing). El resto de páginas se cargan bajo
+// demanda (code-splitting) para reducir el bundle inicial. Las RUTAS no cambian.
 import Home from "@/pages/Home";
-import About from "@/pages/About";
-import Contact from "@/pages/Contact";
-import Calculadora from "@/pages/Calculadora";
 
-// Services
-import EnergyAudits from "@/pages/Services/EnergyAudits";
-import IndustrialHVAC from "@/pages/Services/IndustrialHVAC";
-import ElectricalEngineering from "@/pages/Services/ElectricalEngineering";
-import GeothermalSystems from "@/pages/Services/GeothermalSystems";
+const About = lazy(() => import("@/pages/About"));
+const Contact = lazy(() => import("@/pages/Contact"));
+const Calculadora = lazy(() => import("@/pages/Calculadora"));
+const EnergyAudits = lazy(() => import("@/pages/Services/EnergyAudits"));
+const IndustrialHVAC = lazy(() => import("@/pages/Services/IndustrialHVAC"));
+const ElectricalEngineering = lazy(
+  () => import("@/pages/Services/ElectricalEngineering"),
+);
+const GeothermalSystems = lazy(
+  () => import("@/pages/Services/GeothermalSystems"),
+);
+const NotFound = lazy(() => import("@/pages/not-found"));
+
+/** Loader mínimo de marca mientras se descarga el chunk de una página. */
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="h-1 w-40 overflow-hidden rounded-full bg-border">
+          <div className="h-full w-1/2 animate-[loader-slide_1s_ease-in-out_infinite] rounded-full bg-accent" />
+        </div>
+        <span className="text-xs uppercase tracking-widest text-muted-foreground">
+          Cargando
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function Router() {
   return (
-    <Switch>
-      {/* Core pages */}
-      <Route path="/" component={Home} />
-      <Route path="/about" component={About} />
-      <Route path="/contact" component={Contact} />
-      <Route path="/calculadora-ahorro" component={Calculadora} />
+    <Suspense fallback={<PageLoader />}>
+      <Switch>
+        {/* Core pages */}
+        <Route path="/" component={Home} />
+        <Route path="/about" component={About} />
+        <Route path="/contact" component={Contact} />
+        <Route path="/calculadora-ahorro" component={Calculadora} />
 
-      {/* SEO URLs (OFICIALES, en español) */}
-      <Route path="/auditoria-energetica" component={EnergyAudits} />
-      <Route path="/hvac-industrial" component={IndustrialHVAC} />
-      <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
-      <Route path="/geotermia" component={GeothermalSystems} />
+        {/* SEO URLs (OFICIALES, en español) */}
+        <Route path="/auditoria-energetica" component={EnergyAudits} />
+        <Route path="/hvac-industrial" component={IndustrialHVAC} />
+        <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
+        <Route path="/geotermia" component={GeothermalSystems} />
 
-      {/* 404 */}
-      <Route component={NotFound} />
-    </Switch>
+        {/* 404 */}
+        <Route component={NotFound} />
+      </Switch>
+    </Suspense>
   );
 }
 

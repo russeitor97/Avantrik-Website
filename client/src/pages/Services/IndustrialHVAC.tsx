@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Wind, Thermometer, Fan, Gauge } from "lucide-react";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
+import { Reveal } from "@/components/motion/Reveal";
 
 export default function IndustrialHVAC() {
   return (
@@ -26,28 +27,27 @@ export default function IndustrialHVAC() {
         <div className="container mx-auto px-4 relative z-10 pt-24">
             <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">HVAC Industrial para Plantas y Edificios Industriales
 </h1>
-            <p className="text-xl text-gray-200 max-w-2xl"><p className="text-xl text-gray-200 max-w-2xl">
+            <p className="text-xl text-gray-200 max-w-2xl">
               Diseño, instalación y optimización de sistemas HVAC industrial para plantas de manufactura y edificios industriales, enfocados en eficiencia energética, confiabilidad operativa y control térmico preciso.
             </p>
-</p>
         </div>
       </div>
 
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2 space-y-8">
+          <Reveal className="lg:col-span-2 space-y-8">
             <h2 className="text-3xl font-heading font-bold text-foreground">Sistemas HVAC Industriales para Procesos Críticos</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               Los entornos industriales requieren soluciones HVAC robustas que van más allá del confort. Diseñamos, instalamos y optimizamos sistemas que mantienen temperaturas críticas de proceso, aseguran la calidad del aire y operan con la máxima eficiencia energética bajo cargas pesadas.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border">
+                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
                     <Fan className="w-10 h-10 text-accent mb-4" />
                     <h3 className="font-heading font-bold text-xl mb-2">Ventilación y Filtración</h3>
                     <p className="text-sm text-muted-foreground">Manejo de aire de alta capacidad para fábricas con polvo, humos o subproductos químicos.</p>
                 </div>
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border">
+                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
                     <Thermometer className="w-10 h-10 text-accent mb-4" />
                     <h3 className="font-heading font-bold text-xl mb-2">Enfriamiento de Procesos</h3>
                     <p className="text-sm text-muted-foreground">Chillers y torres de enfriamiento integrados directamente con las líneas de fabricación.</p>
@@ -69,7 +69,7 @@ export default function IndustrialHVAC() {
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           <div className="lg:col-span-1">
             <div className="bg-card shadow-lg border border-border p-8 rounded-sm sticky top-24">

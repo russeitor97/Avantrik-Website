@@ -1,6 +1,7 @@
 import { Link } from "wouter";
 import { ArrowRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { MouseEvent } from "react";
 
 interface ServiceCardProps {
   title: string;
@@ -19,10 +20,30 @@ export function ServiceCard({
   href,
   className,
 }: ServiceCardProps) {
+  // Spotlight que sigue al cursor (solo CSS vars, sin re-render)
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    e.currentTarget.style.setProperty("--sx", `${e.clientX - rect.left}px`);
+    e.currentTarget.style.setProperty("--sy", `${e.clientY - rect.top}px`);
+  };
+
   return (
     <Link href={href}>
       <a className={cn("group block h-full", className)}>
-        <div className="relative flex h-full flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-accent/40 hover:shadow-xl">
+        <div
+          onMouseMove={handleMouseMove}
+          className="relative flex h-full flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-accent/40 hover:shadow-xl"
+        >
+          {/* Spotlight overlay */}
+          <div
+            className="pointer-events-none absolute inset-0 z-10 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            style={{
+              background:
+                "radial-gradient(240px circle at var(--sx, 50%) var(--sy, 50%), hsl(var(--accent) / 0.14), transparent 65%)",
+            }}
+            aria-hidden="true"
+          />
+
           {/* Icon header on navy with brand grid */}
           <div className="relative overflow-hidden bg-primary p-6">
             <div className="absolute inset-0 bg-tech-grid opacity-40" />
@@ -35,7 +56,7 @@ export function ServiceCard({
           </div>
 
           {/* Accent rule */}
-          <div className="h-1 w-full bg-gradient-to-r from-accent to-accent/0" />
+          <div className="h-1 w-full bg-gradient-to-r from-accent to-accent/0 transition-all duration-500 group-hover:from-accent group-hover:to-accent/60" />
 
           <div className="flex flex-grow flex-col p-6">
             <h3 className="font-heading text-xl font-bold uppercase text-foreground transition-colors group-hover:text-accent">

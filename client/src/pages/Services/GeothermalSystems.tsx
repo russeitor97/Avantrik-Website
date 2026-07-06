@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { CheckCircle, Cpu, Sprout, ArrowDownCircle } from "lucide-react";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
+import { Reveal } from "@/components/motion/Reveal";
 
 export default function GeothermalSystems() {
   return (
@@ -32,19 +33,19 @@ export default function GeothermalSystems() {
 
       <section className="py-16 container mx-auto px-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <div className="lg:col-span-2 space-y-8">
+          <Reveal className="lg:col-span-2 space-y-8">
             <h2 className="text-3xl font-heading font-bold text-foreground">Sistemas Geotérmicos de Alta Eficiencia para la Industria</h2>
             <p className="text-lg text-muted-foreground leading-relaxed">
               La tecnología geotérmica aprovecha la temperatura constante de la tierra para proporcionar calefacción y refrigeración altamente eficientes. Para grandes edificios industriales y comerciales, esto se traduce en reducciones masivas en los costos operativos y la huella de carbono durante el ciclo de vida del sistema.
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border">
+                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
                     <ArrowDownCircle className="w-10 h-10 text-accent mb-4" />
                     <h3 className="font-heading font-bold text-xl mb-2">Bombas de Calor de Fuente Terrestre</h3>
                     <p className="text-sm text-muted-foreground">Sistemas de intercambio de alta eficiencia utilizando campos de bucle vertical u horizontal.</p>
                 </div>
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border">
+                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
                     <Sprout className="w-10 h-10 text-accent mb-4" />
                     <h3 className="font-heading font-bold text-xl mb-2">Retorno de Inversión Sostenible</h3>
                     <p className="text-sm text-muted-foreground">Análisis de ahorros a largo plazo y evaluación de elegibilidad para créditos de carbono.</p>
@@ -66,7 +67,7 @@ export default function GeothermalSystems() {
                 </li>
               ))}
             </ul>
-          </div>
+          </Reveal>
 
           <div className="lg:col-span-1">
             <div className="bg-card shadow-lg border border-border p-8 rounded-sm sticky top-24">

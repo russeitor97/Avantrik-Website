@@ -10,12 +10,18 @@ const WHATSAPP_URL = "https://walink.co/e1h4ub";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
 
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+      const doc = document.documentElement;
+      const max = doc.scrollHeight - doc.clientHeight;
+      setProgress(max > 0 ? Math.min(doc.scrollTop / max, 1) : 0);
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -58,6 +64,12 @@ export function Navbar() {
         {/* soft sheen */}
         <span
           className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 to-transparent"
+          aria-hidden="true"
+        />
+        {/* reading progress bar */}
+        <span
+          className="pointer-events-none absolute bottom-0 left-0 h-0.5 bg-accent"
+          style={{ width: `${progress * 100}%` }}
           aria-hidden="true"
         />
 
