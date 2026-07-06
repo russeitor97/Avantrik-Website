@@ -4,12 +4,6 @@
 /services/electrical-engineering /ingenieria-electrica       301
 /services/geothermal-systems     /geotermia                  301
 
-# ELIMINAR URLs basura / Wix viejas
-/blank      410
-/blank-1    410
-/blank-3    410
-/diagnostico 410
-
 # === URLs VIEJAS DE WIX → PÁGINAS REALES (301) ===
 /acerca-de-nosotros                          /about              301
 /geotermia-empresarial                       /geotermia          301
@@ -19,8 +13,10 @@
 /service-page/agenda-tu-sesión-de-diagnóstico  /contact          301
 /services-6                                  /                   301
 
-# === BASURA DE WIX SIN EQUIVALENTE (410 = eliminada) ===
-/blank-2     410
+# URLs basura de Wix (/blank, /blank-1, /blank-2, /blank-3, /diagnostico):
+# caen al fallback SPA y muestran la página 404 (noindex), por lo que Google
+# las desindexa. No se usa "410" porque Netlify no acepta esa sintaxis sin
+# destino (marcaba las reglas como inválidas).
 
 # SPA FALLBACK (obligatorio para React, va al final)
 /*  /index.html  200
