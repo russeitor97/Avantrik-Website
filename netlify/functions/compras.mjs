@@ -4,11 +4,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 /**
  * API del Registro de Compras (misma lógica que la app original, con backend real):
  *
- *  - POST   /api/compras       → subir ticket (PÚBLICO: empleados con el link)
+ *  - POST   /api/compras       → subir ticket (requiere sesión)
  *  - GET    /api/compras       → listar todo (requiere sesión)
  *  - PUT    /api/compras/:id   → confirmar compra (requiere sesión)
  *  - DELETE /api/compras/:id   → descartar/eliminar (requiere sesión)
  *
+ * TODO el API requiere sesión del portal: la app completa (subir + admin)
+ * vive dentro de /portal/compras, detrás del login.
  * Datos en Netlify Blobs (store "compras"). Igual que el original: al
  * confirmar, la foto se descarta y queda solo el registro contable.
  */
@@ -41,7 +43,12 @@ export default async (req, context) => {
   const store = getStore("compras");
   const id = context.params?.id;
 
-  /* ── Subir ticket (público, para empleados con el link) ── */
+  /* ── Toda la API requiere sesión del portal ── */
+  if (!tokenValido(req)) {
+    return Response.json({ error: "Sesión inválida o expirada" }, { status: 401 });
+  }
+
+  /* ── Subir ticket ── */
   if (req.method === "POST") {
     let body;
     try {
@@ -69,11 +76,6 @@ export default async (req, context) => {
       creado: Date.now(),
     });
     return Response.json({ id: nuevoId }, { status: 201 });
-  }
-
-  /* ── Todo lo demás requiere sesión del portal ── */
-  if (!tokenValido(req)) {
-    return Response.json({ error: "Sesión inválida o expirada" }, { status: 401 });
   }
 
   if (req.method === "GET") {
