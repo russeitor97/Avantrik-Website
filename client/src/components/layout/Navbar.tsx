@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
-import { Menu, X, MessageCircle } from "lucide-react";
+import { Menu, X, MessageCircle, LogIn } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
@@ -133,6 +133,14 @@ export function Navbar() {
             >
               <MessageCircle className="h-[18px] w-[18px]" />
             </a>
+            <Link
+              href="/portal"
+              aria-label="Iniciar sesión"
+              title="Iniciar sesión"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-white/10 text-white shadow-[inset_0_1px_0_0_rgba(255,255,255,0.25)] backdrop-blur-md transition-all hover:-translate-y-0.5 hover:border-accent hover:text-accent"
+            >
+              <LogIn className="h-[16px] w-[16px]" />
+            </Link>
           </div>
 
           {/* Mobile right side */}
@@ -174,6 +182,13 @@ export function Navbar() {
               </a>
             </Link>
           ))}
+          <Link
+            href="/portal"
+            className="flex items-center gap-2 py-2 text-lg font-medium text-white/90"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <LogIn className="h-4 w-4 text-accent" /> Iniciar sesión
+          </Link>
           <Link href="/contact">
             <Button
               className="mt-2 w-full rounded-full bg-accent font-bold uppercase text-accent-foreground"

@@ -1,0 +1,12 @@
+# Solo configura funciones y el entorno de desarrollo local.
+# La configuración de build/publish de producción sigue viviendo en la UI de
+# Netlify (no se sobreescribe aquí a propósito).
+
+[functions]
+  node_bundler = "esbuild"
+
+[dev]
+  command = "npx vite dev --port 5199"
+  targetPort = 5199
+  port = 8899
+  autoLaunch = false

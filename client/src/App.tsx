@@ -22,6 +22,10 @@ const ElectricalEngineering = lazy(
 const GeothermalSystems = lazy(
   () => import("@/pages/Services/GeothermalSystems"),
 );
+// Portal interno (noindex, fuera del sitemap)
+const Portal = lazy(() => import("@/pages/Portal"));
+const PortalCompras = lazy(() => import("@/pages/PortalCompras"));
+const SubirTicket = lazy(() => import("@/pages/SubirTicket"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 /** Loader mínimo de marca mientras se descarga el chunk de una página. */
@@ -55,6 +59,11 @@ function Router() {
         <Route path="/hvac-industrial" component={IndustrialHVAC} />
         <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
         <Route path="/geotermia" component={GeothermalSystems} />
+
+        {/* Portal interno (privado, noindex) */}
+        <Route path="/portal" component={Portal} />
+        <Route path="/portal/compras" component={PortalCompras} />
+        <Route path="/subir-ticket" component={SubirTicket} />
 
         {/* 404 */}
         <Route component={NotFound} />
