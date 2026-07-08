@@ -7,12 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { Reveal } from "@/components/motion/Reveal";
-import { useToast } from "@/hooks/use-toast";
 import { getSession, saveSession, clearSession } from "@/lib/portal-auth";
-import { Lock, LogOut, Receipt, ArrowRight, Link2, Loader2, LayoutGrid } from "lucide-react";
+import { Lock, LogOut, Receipt, ArrowRight, Loader2, LayoutGrid } from "lucide-react";
 
 export default function Portal() {
-  const { toast } = useToast();
   const [session, setSession] = useState(getSession());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,14 +43,6 @@ export default function Portal() {
     setSession(null);
     setEmail("");
     setPassword("");
-  }
-
-  function copiarLinkSubir() {
-    const url = `${window.location.origin}/subir-ticket`;
-    navigator.clipboard?.writeText(url).then(
-      () => toast({ title: "Link copiado", description: "Compártelo con los empleados para que suban tickets." }),
-      () => toast({ title: url, description: "Copia este link manualmente." }),
-    );
   }
 
   return (
@@ -185,25 +175,6 @@ export default function Portal() {
                   </div>
                 </Reveal>
               </div>
-
-              <Reveal delay={0.18}>
-                <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-sm border border-white/15 bg-primary/25 px-5 py-4">
-                  <div className="flex items-center gap-3 text-sm text-primary-foreground/70">
-                    <Link2 className="h-4 w-4 shrink-0 text-accent" />
-                    <span>
-                      Los empleados suben tickets <strong className="text-white">sin cuenta</strong> en{" "}
-                      <span className="text-accent">avantrik.com/subir-ticket</span>
-                    </span>
-                  </div>
-                  <Button
-                    size="sm"
-                    onClick={copiarLinkSubir}
-                    className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90"
-                  >
-                    Copiar link
-                  </Button>
-                </div>
-              </Reveal>
             </div>
           )}
         </div>

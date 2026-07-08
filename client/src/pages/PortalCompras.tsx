@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { useToast } from "@/hooks/use-toast";
 import { getSession, authHeaders, clearSession } from "@/lib/portal-auth";
-import { ArrowLeft, ClipboardCopy, Loader2, LogOut, RefreshCcw, Trash2, X, PencilLine, Receipt } from "lucide-react";
+import { ArrowLeft, ClipboardCopy, Link2, Loader2, LogOut, RefreshCcw, Trash2, X, PencilLine, Receipt } from "lucide-react";
 
 /* ── Tipos (mismo esquema de datos que la app original) ── */
 interface Compra {
@@ -164,6 +164,14 @@ export default function PortalCompras() {
     }
   }
 
+  function copiarLinkSubir() {
+    const url = `${window.location.origin}/subir-ticket`;
+    navigator.clipboard?.writeText(url).then(
+      () => toast({ title: "Link copiado", description: "Compártelo con los empleados para que suban tickets." }),
+      () => toast({ title: url, description: "Copia este link manualmente." }),
+    );
+  }
+
   /** Mismo TSV que la app original (sin encabezados, para la columna B de Compras). */
   function copiarCSV() {
     if (confFiltradas.length === 0) {
@@ -242,10 +250,20 @@ export default function PortalCompras() {
         ) : (
           <>
             {/* ───── Pendientes ───── */}
-            <h2 className="mb-4 font-heading text-xl font-bold text-foreground">
-              Pendientes de procesar{" "}
-              <span className="text-accent">({pendientes.length})</span>
-            </h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-heading text-xl font-bold text-foreground">
+                Pendientes de procesar{" "}
+                <span className="text-accent">({pendientes.length})</span>
+              </h2>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={copiarLinkSubir}
+                className="rounded-sm border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+              >
+                <Link2 className="mr-2 h-4 w-4" /> Copiar link para subir tickets
+              </Button>
+            </div>
 
             {pendientes.length === 0 ? (
               <div className="mb-10 rounded-sm border border-dashed border-border bg-card px-5 py-8 text-center text-sm text-muted-foreground">
