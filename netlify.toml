@@ -10,3 +10,6 @@
   targetPort = 5199
   port = 8899
   autoLaunch = false
+  # Solo para dev: dónde viven los estáticos y el _redirects (en producción
+  # el publish sigue configurado en la UI de Netlify).
+  publish = "client/public"

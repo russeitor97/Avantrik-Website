@@ -1,3 +1,9 @@
+# App interna "Reportes de Servicio": página estática dentro de public/.
+# Regla forzada (200!) para que la URL limpia sirva el archivo y no caiga
+# al fallback del SPA (necesario también en netlify dev, donde vite
+# respondería su propio index.html).
+/portal/reportes/*   /portal/reportes/index.html   200!
+
 # REDIRECTS: URLs viejas en inglés → URLs oficiales en español (301)
 /services/energy-audits          /auditoria-energetica       301
 /services/industrial-hvac        /hvac-industrial            301
