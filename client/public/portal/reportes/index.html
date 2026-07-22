@@ -28,6 +28,7 @@
 <!-- Firebase Compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <!-- Firebase se inicializa abajo en el script principal -->
 <style>
 /* ============================================================
@@ -2667,9 +2668,36 @@ function buscarReportes(query){
   });
 }
 
-// INIT
+// INIT — Firestore ahora exige usuario autenticado (reglas request.auth != null).
+// El login del portal deja la sesión de Firebase persistida en este mismo
+// origen; aquí solo se espera. Sin sesión: aviso para volver al portal.
+window.__reauthPortal = function(){
+  try{ localStorage.removeItem('avantrik_portal_session'); }catch(e){}
+  location.replace('/portal');
+};
+function _mostrarReauth(){
+  if (document.getElementById('fb-reauth')) return;
+  var ov = document.createElement('div');
+  ov.id = 'fb-reauth';
+  ov.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(2,6,23,.88);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)';
+  ov.innerHTML = '<div style="max-width:380px;width:100%;text-align:center;background:hsl(217 46% 12%);border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:28px 24px;box-shadow:0 24px 60px -20px rgba(2,6,23,.9)">'
+    + '<div style="font-size:40px;margin-bottom:10px">🔐</div>'
+    + '<div style="font-family:Rajdhani,sans-serif;font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:hsl(210 40% 98%);margin-bottom:8px">Reconecta tu acceso</div>'
+    + '<div style="font-size:13px;color:rgba(226,235,245,.72);line-height:1.6;margin-bottom:18px">Tu acceso a la nube de reportes expiró o aún no se activa en este dispositivo. Vuelve a iniciar sesión en el portal para reconectarlo.</div>'
+    + '<button onclick="window.__reauthPortal()" style="width:100%;padding:12px;border:none;border-radius:4px;background:hsl(85 85% 55%);color:hsl(215 50% 15%);font-family:Rajdhani,sans-serif;font-size:15px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;cursor:pointer">Iniciar sesión</button>'
+    + '</div>';
+  document.body.appendChild(ov);
+}
 renderHome();
-loadProyectos();
+firebase.auth().onAuthStateChanged(function(user){
+  var prev = document.getElementById('fb-reauth');
+  if (user) {
+    if (prev) prev.remove();
+    loadProyectos();
+  } else {
+    _mostrarReauth();
+  }
+});
 </script>
 </body>
 </html>

@@ -30,6 +30,15 @@ export default function Portal() {
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error || "No se pudo iniciar sesión");
       saveSession(data);
+      // Firestore (app de Reportes) exige usuario autenticado: se inicia
+      // sesión en Firebase con las mismas credenciales. Si falla no bloquea
+      // el portal — la app de Reportes pedirá reconectar por su cuenta.
+      try {
+        const { firebaseSignIn } = await import("@/lib/firebase");
+        await firebaseSignIn(email, password);
+      } catch (err) {
+        console.warn("No se pudo iniciar sesión en la nube de Reportes:", err);
+      }
       setSession(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo iniciar sesión");
@@ -39,6 +48,9 @@ export default function Portal() {
   }
 
   function onLogout() {
+    import("@/lib/firebase")
+      .then((m) => m.firebaseSignOut())
+      .catch(() => {});
     clearSession();
     setSession(null);
     setEmail("");
