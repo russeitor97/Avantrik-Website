@@ -1,18 +1,18 @@
 import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
 import { ContactForm } from "@/components/contact-form";
-import { Phone, Mail, Linkedin } from "lucide-react";
+import { Phone, Mail, Linkedin, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 
 export default function Contact() {
   return (
     <Layout>    <Helmet>
-        <title>Contacto | Avantrik Ingeniería Industrial en México</title>
+        <title>Contacto | Avantrik Ingeniería Industrial en Querétaro</title>
 
         <meta
           name="description"
-          content="Contacta a Avantrik para proyectos de ingeniería industrial, HVAC, auditorías energéticas y sistemas eléctricos en México. Atención especializada B2B."
+          content="Contacta a Avantrik para proyectos de ingeniería industrial, HVAC, auditorías energéticas, BMS y sistemas eléctricos en Querétaro. Atención especializada B2B."
         />
 
         <link
@@ -65,6 +65,17 @@ export default function Contact() {
                 <div>
                   <h3 className="font-bold text-foreground">Correo</h3>
                   <p className="text-muted-foreground">info@avantrik.com</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-secondary flex items-center justify-center rounded-sm shrink-0">
+                  <MapPin className="w-6 h-6 text-accent" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-foreground">Zona de servicio</h3>
+                  <p className="text-muted-foreground">Querétaro y el Bajío</p>
+                  <p className="text-xs text-muted-foreground mt-1">Proyectos en todo México</p>
                 </div>
               </div>
 

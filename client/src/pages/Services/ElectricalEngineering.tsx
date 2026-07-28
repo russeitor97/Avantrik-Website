@@ -9,11 +9,11 @@ import { Reveal } from "@/components/motion/Reveal";
 export default function ElectricalEngineering() {
   return (
     <Layout>    <Helmet>
-        <title>Ingeniería Eléctrica Industrial | Avantrik México</title>
+        <title>Ingeniería Eléctrica Industrial en Querétaro | Avantrik</title>
 
         <meta
           name="description"
-          content="Ingeniería eléctrica industrial en México. Diseño e instalación de sistemas de baja y media tensión, tableros eléctricos, auditorías de seguridad y eficiencia energética para empresas."
+          content="Ingeniería eléctrica industrial en Querétaro. Diseño e instalación de sistemas de baja y media tensión, tableros eléctricos, auditorías de seguridad y eficiencia energética para empresas en Querétaro y el Bajío."
         />
 
         <link

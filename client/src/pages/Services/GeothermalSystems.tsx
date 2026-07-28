@@ -9,11 +9,11 @@ import { Reveal } from "@/components/motion/Reveal";
 export default function GeothermalSystems() {
   return (
     <Layout>    <Helmet>
-        <title>Sistemas Geotérmicos Industriales | Avantrik México</title>
+        <title>Sistemas Geotérmicos Industriales en Querétaro | Avantrik</title>
 
         <meta
           name="description"
-          content="Sistemas geotérmicos industriales en México. Soluciones de calefacción y refrigeración de alta eficiencia para plantas y edificios con reducción de costos y emisiones."
+          content="Sistemas geotérmicos industriales en Querétaro. Soluciones de calefacción y refrigeración de alta eficiencia para plantas y edificios con reducción de costos y emisiones en Querétaro y el Bajío."
         />
 
         <link

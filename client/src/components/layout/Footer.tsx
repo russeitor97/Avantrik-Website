@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Mail, Phone, Linkedin, ArrowUpRight } from "lucide-react";
+import { Mail, Phone, Linkedin, ArrowUpRight, MapPin } from "lucide-react";
 
 import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
 
@@ -95,6 +95,10 @@ export function Footer() {
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 shrink-0 text-accent" />
                 <span>info@avantrik.com</span>
+              </li>
+              <li className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 shrink-0 text-accent" />
+                <span>Querétaro y el Bajío · Proyectos en todo México</span>
               </li>
             </ul>
           </div>

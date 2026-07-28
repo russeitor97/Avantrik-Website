@@ -9,11 +9,11 @@ import { Reveal } from "@/components/motion/Reveal";
 export default function IndustrialHVAC() {
   return (
     <Layout>    <Helmet>
-        <title>HVAC Industrial para Plantas y Edificios | Avantrik México</title>
+        <title>HVAC Industrial en Querétaro para Plantas y Edificios | Avantrik</title>
 
         <meta
           name="description"
-          content="Sistemas HVAC industrial en México. Diseño, instalación y optimización de climatización industrial para plantas, procesos críticos y edificios de alto desempeño."
+          content="Sistemas HVAC industrial en Querétaro. Diseño, instalación y optimización de climatización industrial para plantas, procesos críticos y edificios de alto desempeño en Querétaro y el Bajío."
         />
 
         <link

@@ -41,12 +41,12 @@ export default function Home() {
   return (
     <Layout>    <Helmet>
         <title>
-          Ingeniería Industrial, HVAC y Eficiencia Energética | Avantrik México
+          Ingeniería, HVAC y Eficiencia Energética en Querétaro | Avantrik
         </title>
 
         <meta
           name="description"
-          content="Empresa de ingeniería industrial en México especializada en HVAC industrial, auditorías energéticas, ingeniería eléctrica y soluciones técnicas para plantas y edificios."
+          content="Empresa de ingeniería en Querétaro especializada en HVAC industrial, auditorías energéticas, BMS e ingeniería eléctrica para plantas y edificios. Servicio en Querétaro y el Bajío."
         />
 
         <link
@@ -68,12 +68,12 @@ export default function Home() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-12 items-center">
             <Reveal className="w-full md:w-1/2">
-              <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Ingeniería Industrial y Eficiencia Energética</h2>
+              <h2 className="text-accent font-bold tracking-widest uppercase mb-2 text-sm">Ingeniería en Querétaro · HVAC y Eficiencia Energética</h2>
               <h3 className="text-3xl md:text-4xl font-heading font-bold text-foreground mb-6">
                 Soluciones de Ingeniería, HVAC y Energía para la Industria
               </h3>
               <p className="text-muted-foreground text-lg leading-relaxed mb-6">
-                Avantrik es una firma de ingeniería dedicada a optimizar la infraestructura industrial y comercial. No solo reparamos sistemas; los re-ingeniamos para lograr la máxima eficiencia y fiabilidad.
+                Avantrik es una firma de ingeniería con base en Querétaro, dedicada a optimizar la infraestructura industrial y comercial en Querétaro y el Bajío. No solo reparamos sistemas; los re-ingeniamos para lograr la máxima eficiencia y fiabilidad.
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
                 {["Reducción de Costos Operativos", "Optimización de Sistemas", "Eficiencia Energética", "Ingeniería Aplicada"].map((item) => (

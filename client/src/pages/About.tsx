@@ -7,11 +7,11 @@ import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
 export default function About() {
   return (
     <Layout>    <Helmet>
-          <title>Sobre Avantrik | Ingeniería Industrial y Energética en México</title>
+          <title>Sobre Avantrik | Ingeniería Industrial y Energética en Querétaro</title>
 
           <meta
             name="description"
-            content="Conoce Avantrik: empresa mexicana de ingeniería especializada en HVAC industrial, ingeniería eléctrica y eficiencia energética para industrias y edificios."
+            content="Conoce Avantrik: empresa de ingeniería en Querétaro especializada en HVAC industrial, ingeniería eléctrica, BMS y eficiencia energética para industrias y edificios."
           />
 
           <link

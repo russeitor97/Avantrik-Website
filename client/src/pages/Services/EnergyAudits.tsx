@@ -20,11 +20,11 @@ const audits = [
 export default function EnergyAudits() {
   return (
     <Layout>    <Helmet>
-        <title>Auditorías Energéticas Industriales | Avantrik México</title>
+        <title>Auditorías Energéticas Industriales en Querétaro | Avantrik</title>
 
         <meta
           name="description"
-          content="Auditorías energéticas industriales en México. Diagnóstico, análisis y optimización del consumo energético para reducir costos eléctricos y mejorar la eficiencia."
+          content="Auditorías energéticas industriales en Querétaro. Diagnóstico, análisis y optimización del consumo energético para reducir costos eléctricos y mejorar la eficiencia en Querétaro y el Bajío."
         />
 
         <link
