@@ -409,7 +409,7 @@ export default function PortalCompras() {
                         <span className="mt-1 block text-xs text-muted-foreground">
                           o sube una imagen desde tu galería
                         </span>
-                        <input type="file" accept="image/*" capture="environment" className="hidden" onChange={onFile} />
+                        <input type="file" accept="image/*" className="hidden" onChange={onFile} />
                       </label>
                     )}
 
