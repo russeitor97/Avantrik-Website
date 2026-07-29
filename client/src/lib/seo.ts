@@ -22,7 +22,10 @@ export interface HeadTags {
   alternates?: { hreflang: string; href: string }[];
   /** p. ej. "noindex, nofollow" para páginas privadas. */
   robots?: string;
+  /** Etiquetas og:* (atributo `property`). */
   openGraph?: Record<string, string>;
+  /** Etiquetas twitter:* (atributo `name`, como las de index.html). */
+  twitter?: Record<string, string>;
 }
 
 /** Actualiza la etiqueta si ya existe; si no, la crea marcada como `data-seo`. */
@@ -60,11 +63,13 @@ export function useSeo({
   alternates,
   robots,
   openGraph,
+  twitter,
 }: HeadTags) {
   // Las listas se serializan para que el efecto no se dispare en cada render
   // por recibir un array nuevo con el mismo contenido.
   const altKey = JSON.stringify(alternates ?? []);
   const ogKey = JSON.stringify(openGraph ?? {});
+  const twKey = JSON.stringify(twitter ?? {});
 
   useEffect(() => {
     document.documentElement.lang = lang;
@@ -77,6 +82,12 @@ export function useSeo({
       JSON.parse(ogKey) as Record<string, string>,
     )) {
       meta("property", key, content);
+    }
+
+    for (const [key, content] of Object.entries(
+      JSON.parse(twKey) as Record<string, string>,
+    )) {
+      meta("name", key, content);
     }
 
     // canonical y alternates se recrean en cada navegación: son los que
@@ -98,5 +109,5 @@ export function useSeo({
     for (const alt of JSON.parse(altKey) as NonNullable<HeadTags["alternates"]>) {
       addLink("alternate", alt.href, alt.hreflang);
     }
-  }, [lang, title, description, canonical, robots, altKey, ogKey]);
+  }, [lang, title, description, canonical, robots, altKey, ogKey, twKey]);
 }

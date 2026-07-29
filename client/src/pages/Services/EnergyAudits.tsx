@@ -195,11 +195,9 @@ export default function EnergyAudits() {
               <h3 className="font-heading font-bold text-2xl mb-4">{t.ctaTitle}</h3>
               <p className="text-muted-foreground mb-6">{t.ctaBody}</p>
 
-              <Link href={href("contact")}>
-                <Button className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide mb-4">
-                  {t.ctaButton}
-                </Button>
-              </Link>
+              <Button asChild className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide mb-4">
+                <Link href={href("contact")}>{t.ctaButton}</Link>
+              </Button>
 
               <div className="border-t border-border pt-6 mt-6">
                 <h4 className="font-bold text-sm uppercase mb-2">{t.whyTitle}</h4>

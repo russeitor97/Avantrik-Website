@@ -87,25 +87,25 @@ export function HeroSection({
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href={primaryHref}>
-              <Button
-                size="lg"
-                className="group bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base h-14 px-8 rounded-sm uppercase tracking-wide"
-              >
+            <Button
+              asChild
+              size="lg"
+              className="group bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base h-14 px-8 rounded-sm uppercase tracking-wide"
+            >
+              <Link href={primaryHref}>
                 {ctaText ?? t.cta}
                 <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
 
-            <Link href={secondaryHref}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white font-bold text-base h-14 px-8 rounded-sm uppercase tracking-wide"
-              >
-                {secondaryCtaText ?? t.secondaryCta}
-              </Button>
-            </Link>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white font-bold text-base h-14 px-8 rounded-sm uppercase tracking-wide"
+            >
+              <Link href={secondaryHref}>{secondaryCtaText ?? t.secondaryCta}</Link>
+            </Button>
           </div>
 
           {/* Trust strip */}

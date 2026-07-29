@@ -184,11 +184,9 @@ export default function Home() {
                   </div>
                 ))}
               </div>
-              <Link href={href("about")}>
-                <Button variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide">
-                  {t.aboutCta}
-                </Button>
-              </Link>
+              <Button asChild variant="outline" className="border-primary text-primary hover:bg-primary hover:text-primary-foreground font-bold uppercase tracking-wide">
+                <Link href={href("about")}>{t.aboutCta}</Link>
+              </Button>
             </Reveal>
             <Reveal delay={0.15} className="w-full md:w-1/2">
               <div className="relative h-[400px] bg-secondary/30 rounded-sm overflow-hidden border border-border">
@@ -276,12 +274,12 @@ export default function Home() {
               {t.ctaBody}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href={href("contact")}>
-                <Button size="lg" className="group bg-accent text-accent-foreground hover:bg-accent/90 font-bold h-14 px-8 uppercase tracking-wide rounded-sm">
+              <Button asChild size="lg" className="group bg-accent text-accent-foreground hover:bg-accent/90 font-bold h-14 px-8 uppercase tracking-wide rounded-sm">
+                <Link href={href("contact")}>
                   {t.ctaButton}
                   <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </Reveal>
         </div>

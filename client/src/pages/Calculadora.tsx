@@ -1,3 +1,4 @@
+import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
@@ -1255,11 +1256,11 @@ export default function Calculadora() {
           <p className="text-muted-foreground max-w-xl mx-auto mb-8">
             {t.cta.body}
           </p>
-          <a href={href("contact")}>
-            <Button size="lg" className="bg-accent text-accent-foreground font-bold uppercase tracking-wide h-14 px-8 hover:bg-accent/90">
+          <Button asChild size="lg" className="bg-accent text-accent-foreground font-bold uppercase tracking-wide h-14 px-8 hover:bg-accent/90">
+            <Link href={href("contact")}>
               {t.cta.button} <ArrowRight className="w-5 h-5 ml-2" />
-            </Button>
-          </a>
+            </Link>
+          </Button>
         </div>
       </section>
     </Layout>

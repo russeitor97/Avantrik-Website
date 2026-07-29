@@ -81,11 +81,12 @@ export function Footer() {
             <ul className="space-y-3 text-sm text-primary-foreground/60">
               {serviceLinks.map((l) => (
                 <li key={l.page}>
-                  <Link href={href(l.page)}>
-                    <a className="group inline-flex items-center gap-1 transition-colors hover:text-accent">
-                      {l[lang]}
-                      <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
-                    </a>
+                  <Link
+                    href={href(l.page)}
+                    className="group inline-flex items-center gap-1 transition-colors hover:text-accent"
+                  >
+                    {l[lang]}
+                    <ArrowUpRight className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100" />
                   </Link>
                 </li>
               ))}
@@ -98,8 +99,8 @@ export function Footer() {
             <ul className="space-y-3 text-sm text-primary-foreground/60">
               {companyLinks.map((l) => (
                 <li key={l.page}>
-                  <Link href={href(l.page)}>
-                    <a className="transition-colors hover:text-accent">{l[lang]}</a>
+                  <Link href={href(l.page)} className="transition-colors hover:text-accent">
+                    {l[lang]}
                   </Link>
                 </li>
               ))}

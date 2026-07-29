@@ -112,22 +112,20 @@ export function Navbar() {
         />
 
         <div className="container relative mx-auto flex items-center justify-between px-4">
-          <Link href={href("home")}>
-            <a className={cn("group flex items-center gap-3", textGlow)}>
-              <img
-                src={logo}
-                alt="Avantrik Logo"
-                className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-105"
-              />
-              <div className="flex flex-col">
-                <span className="font-heading text-2xl font-bold leading-none tracking-tight text-white">
-                  AVANTRIK
-                </span>
-                <span className="whitespace-nowrap text-[10px] font-medium uppercase tracking-widest text-white/60">
-                  {t.tagline}
-                </span>
-              </div>
-            </a>
+          <Link href={href("home")} className={cn("group flex items-center gap-3", textGlow)}>
+            <img
+              src={logo}
+              alt="Avantrik Logo"
+              className="h-10 w-10 object-contain transition-transform duration-300 group-hover:scale-105"
+            />
+            <div className="flex flex-col">
+              <span className="font-heading text-2xl font-bold leading-none tracking-tight text-white">
+                AVANTRIK
+              </span>
+              <span className="whitespace-nowrap text-[10px] font-medium uppercase tracking-widest text-white/60">
+                {t.tagline}
+              </span>
+            </div>
           </Link>
 
           {/* Desktop Nav */}
@@ -135,35 +133,36 @@ export function Navbar() {
             {navLinks.map((link) => {
               const active = location === link.href;
               return (
-                <Link key={link.href} href={link.href}>
-                  <a
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={cn(
+                    // nowrap: si una etiqueta se parte en dos líneas, la barra
+                    // crece y el logo se encima con el primer enlace.
+                    "group relative whitespace-nowrap text-sm font-medium uppercase tracking-wide transition-colors",
+                    textGlow,
+                    active ? "text-accent" : "text-white/85 hover:text-white",
+                  )}
+                >
+                  {link.name}
+                  <span
                     className={cn(
-                      // nowrap: si una etiqueta se parte en dos líneas, la barra
-                      // crece y el logo se encima con el primer enlace.
-                      "group relative whitespace-nowrap text-sm font-medium uppercase tracking-wide transition-colors",
-                      textGlow,
-                      active ? "text-accent" : "text-white/85 hover:text-white",
+                      "absolute -bottom-1.5 left-0 h-0.5 bg-accent transition-all duration-300",
+                      active ? "w-full" : "w-0 group-hover:w-full",
                     )}
-                  >
-                    {link.name}
-                    <span
-                      className={cn(
-                        "absolute -bottom-1.5 left-0 h-0.5 bg-accent transition-all duration-300",
-                        active ? "w-full" : "w-0 group-hover:w-full",
-                      )}
-                    />
-                  </a>
+                  />
                 </Link>
               );
             })}
-            <Link href={href("contact")}>
-              <Button
-                size="sm"
-                className="rounded-full border border-white/20 bg-accent/90 font-bold uppercase tracking-wider text-accent-foreground shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-accent"
-              >
-                {t.quote}
-              </Button>
-            </Link>
+            {/* asChild: el Button presta sus estilos al <a> del Link en vez de
+                renderizar un <button> dentro de un <a> (HTML inválido). */}
+            <Button
+              asChild
+              size="sm"
+              className="rounded-full border border-white/20 bg-accent/90 font-bold uppercase tracking-wider text-accent-foreground shadow-[inset_0_1px_0_0_rgba(255,255,255,0.35)] transition-transform hover:-translate-y-0.5 hover:bg-accent"
+            >
+              <Link href={href("contact")}>{t.quote}</Link>
+            </Button>
             <Link
               href={langSwitch.href}
               aria-label={t.switchLang}
@@ -226,16 +225,16 @@ export function Navbar() {
       {mobileMenuOpen && (
         <div className="absolute inset-x-0 top-full flex flex-col gap-1 border-b border-white/10 bg-ink/85 p-4 shadow-[0_20px_40px_-16px_rgba(2,6,23,0.6)] backdrop-blur-2xl backdrop-saturate-150 xl:hidden animate-in slide-in-from-top-4">
           {navLinks.map((link) => (
-            <Link key={link.href} href={link.href}>
-              <a
-                className={cn(
-                  "border-b border-white/10 py-2 text-lg font-medium",
-                  location === link.href ? "text-accent" : "text-white/90",
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {link.name}
-              </a>
+            <Link
+              key={link.href}
+              href={link.href}
+              className={cn(
+                "border-b border-white/10 py-2 text-lg font-medium",
+                location === link.href ? "text-accent" : "text-white/90",
+              )}
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              {link.name}
             </Link>
           ))}
           <Link
@@ -245,14 +244,13 @@ export function Navbar() {
           >
             <LogIn className="h-4 w-4 text-accent" /> {t.signIn}
           </Link>
-          <Link href={href("contact")}>
-            <Button
-              className="mt-2 w-full rounded-full bg-accent font-bold uppercase text-accent-foreground"
-              onClick={() => setMobileMenuOpen(false)}
-            >
-              {t.requestAudit}
-            </Button>
-          </Link>
+          <Button
+            asChild
+            className="mt-2 w-full rounded-full bg-accent font-bold uppercase text-accent-foreground"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Link href={href("contact")}>{t.requestAudit}</Link>
+          </Button>
         </div>
       )}
     </nav>

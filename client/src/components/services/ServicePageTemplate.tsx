@@ -92,11 +92,9 @@ export function ServicePageTemplate({ page, copy, cardIcons }: Props) {
               <h3 className="font-heading font-bold text-2xl mb-4">{copy.sidebarTitle}</h3>
               <p className="text-muted-foreground mb-6">{copy.sidebarBody}</p>
 
-              <Link href={href("contact")}>
-                <Button className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide mb-4">
-                  {copy.sidebarCta}
-                </Button>
-              </Link>
+              <Button asChild className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide mb-4">
+                <Link href={href("contact")}>{copy.sidebarCta}</Link>
+              </Button>
             </div>
           </div>
         </div>

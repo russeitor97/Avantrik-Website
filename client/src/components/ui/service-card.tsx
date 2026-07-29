@@ -1,7 +1,13 @@
 import { Link } from "wouter";
 import { ArrowRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCopy } from "@/lib/i18n";
 import type { MouseEvent } from "react";
+
+const T = {
+  es: { more: "Más información" },
+  en: { more: "Learn more" },
+};
 
 interface ServiceCardProps {
   title: string;
@@ -20,6 +26,8 @@ export function ServiceCard({
   href,
   className,
 }: ServiceCardProps) {
+  const t = useCopy(T);
+
   // Spotlight que sigue al cursor (solo CSS vars, sin re-render)
   const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -27,9 +35,10 @@ export function ServiceCard({
     e.currentTarget.style.setProperty("--sy", `${e.clientY - rect.top}px`);
   };
 
+  // wouter v3 ya renderiza el <a>: pasarle la clase directamente al Link evita
+  // anidar un segundo <a> (HTML inválido).
   return (
-    <Link href={href}>
-      <a className={cn("group block h-full", className)}>
+    <Link href={href} className={cn("group block h-full", className)}>
         <div
           onMouseMove={handleMouseMove}
           className="relative flex h-full flex-col overflow-hidden rounded-sm border border-border bg-card shadow-sm transition-all duration-300 hover:-translate-y-1.5 hover:border-accent/40 hover:shadow-xl"
@@ -66,12 +75,11 @@ export function ServiceCard({
               {description}
             </p>
             <span className="mt-6 inline-flex items-center text-sm font-bold uppercase text-primary transition-colors group-hover:text-accent">
-              Más información
+              {t.more}
               <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
             </span>
           </div>
         </div>
-      </a>
     </Link>
   );
 }

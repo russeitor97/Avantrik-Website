@@ -37,6 +37,12 @@ export function Seo({ page, title, description }: SeoProps) {
       "og:url": url,
       "og:locale": lang === "en" ? "en_US" : "es_MX",
     },
+    // Sin esto, index.html deja las de Twitter en español y una página en
+    // inglés se comparte con título y descripción en español.
+    twitter: {
+      "twitter:title": title,
+      "twitter:description": description,
+    },
   });
 
   return null;

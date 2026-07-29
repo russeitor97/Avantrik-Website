@@ -103,15 +103,16 @@ export function CalculatorHero() {
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <Link href={href("calculator")}>
-              <Button
-                size="lg"
-                className="group bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wide h-14 px-8 rounded-sm"
-              >
+            <Button
+              asChild
+              size="lg"
+              className="group bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wide h-14 px-8 rounded-sm"
+            >
+              <Link href={href("calculator")}>
                 <Calculator className="w-5 h-5 mr-2" /> {t.cta}
                 <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </Reveal>
 
@@ -198,10 +199,8 @@ export function CalculatorHero() {
 
             <p className="mt-5 text-[11px] leading-relaxed text-primary-foreground/40">
               {t.disclaimer}{" "}
-              <Link href={href("calculator")}>
-                <a className="text-accent underline-offset-2 hover:underline">
-                  {t.detailed}
-                </a>
+              <Link href={href("calculator")} className="text-accent underline-offset-2 hover:underline">
+                {t.detailed}
               </Link>
             </p>
           </div>

@@ -49,23 +49,25 @@ export default function NotFound() {
             {t.body}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href={href("home")}>
-              <Button
-                size="lg"
-                className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wide h-14 px-8"
-              >
+            <Button
+              asChild
+              size="lg"
+              className="bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wide h-14 px-8"
+            >
+              <Link href={href("home")}>
                 <Home className="w-5 h-5 mr-2" /> {t.home}
-              </Button>
-            </Link>
-            <Link href={href("contact")}>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-bold uppercase tracking-wide h-14 px-8"
-              >
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 font-bold uppercase tracking-wide h-14 px-8"
+            >
+              <Link href={href("contact")}>
                 <Mail className="w-5 h-5 mr-2" /> {t.contact}
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

@@ -120,17 +120,20 @@ export default function Contact() {
                 </div>
                 <div>
                   <h3 className="font-bold text-foreground">{t.social}</h3>
-                  <a
-                    href="https://mx.linkedin.com/company/avantrik"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block mt-2"
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="mt-2 border-accent text-accent hover:bg-accent hover:text-white flex items-center gap-2"
                   >
-                    <Button variant="outline" className="border-accent text-accent hover:bg-accent hover:text-white flex items-center gap-2">
+                    <a
+                      href="https://mx.linkedin.com/company/avantrik"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       <Linkedin className="w-4 h-4" />
                       {t.visitLinkedin}
-                    </Button>
-                  </a>
+                    </a>
+                  </Button>
                 </div>
               </div>
             </div>
