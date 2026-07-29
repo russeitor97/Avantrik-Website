@@ -105,7 +105,9 @@ export function Footer() {
                 </li>
               ))}
               <li>
-                <a href="#" className="transition-colors hover:text-accent">{t.privacy}</a>
+                <Link href={href("privacy")} className="transition-colors hover:text-accent">
+                  {t.privacy}
+                </Link>
               </li>
             </ul>
           </div>

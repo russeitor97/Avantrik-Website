@@ -23,6 +23,7 @@ const GeothermalSystems = lazy(
   () => import("@/pages/Services/GeothermalSystems"),
 );
 // Portal interno (noindex, fuera del sitemap)
+const Privacy = lazy(() => import("@/pages/Privacy"));
 const Portal = lazy(() => import("@/pages/Portal"));
 const PortalCompras = lazy(() => import("@/pages/PortalCompras"));
 const NotFound = lazy(() => import("@/pages/not-found"));
@@ -59,6 +60,7 @@ function Router() {
         <Route path="/hvac-industrial" component={IndustrialHVAC} />
         <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
         <Route path="/geotermia" component={GeothermalSystems} />
+        <Route path="/aviso-de-privacidad" component={Privacy} />
 
         {/* Versión en inglés — mismos componentes, el idioma sale de la URL
             (ver lib/i18n.ts). Los slugs están en inglés a propósito: son URLs
@@ -71,6 +73,7 @@ function Router() {
         <Route path="/en/industrial-hvac" component={IndustrialHVAC} />
         <Route path="/en/electrical-engineering" component={ElectricalEngineering} />
         <Route path="/en/geothermal-systems" component={GeothermalSystems} />
+        <Route path="/en/privacy-policy" component={Privacy} />
 
         {/* Portal interno (privado, noindex) */}
         <Route path="/portal" component={Portal} />

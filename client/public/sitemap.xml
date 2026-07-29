@@ -114,6 +114,21 @@
   </url>
 
   <url>
+    <loc>https://www.avantrik.com/aviso-de-privacidad</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/aviso-de-privacidad"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/privacy-policy"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/aviso-de-privacidad"/>
+    <priority>0.3</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/privacy-policy</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/aviso-de-privacidad"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/privacy-policy"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/aviso-de-privacidad"/>
+    <priority>0.3</priority>
+  </url>
+
+  <url>
     <loc>https://www.avantrik.com/geotermia</loc>
     <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/geotermia"/>
     <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/geothermal-systems"/>

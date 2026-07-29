@@ -25,6 +25,7 @@ export const PAGES = {
   hvac: { es: "/hvac-industrial", en: "/en/industrial-hvac" },
   electrical: { es: "/ingenieria-electrica", en: "/en/electrical-engineering" },
   geothermal: { es: "/geotermia", en: "/en/geothermal-systems" },
+  privacy: { es: "/aviso-de-privacidad", en: "/en/privacy-policy" },
 } as const;
 
 export type PageKey = keyof typeof PAGES;
