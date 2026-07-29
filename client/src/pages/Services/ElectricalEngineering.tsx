@@ -1,88 +1,82 @@
-import { Helmet } from "react-helmet-async";
-import { Layout } from "@/components/layout/Layout";
-import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { CheckCircle, Zap, ShieldCheck, Cable, Lightbulb } from "lucide-react";
-import { TechBackdrop } from "@/components/ui/tech-backdrop";
-import { Reveal } from "@/components/motion/Reveal";
+import { Zap, ShieldCheck } from "lucide-react";
+import { ServicePageTemplate, type ServiceCopy } from "@/components/services/ServicePageTemplate";
+import { useCopy, type Lang } from "@/lib/i18n";
+
+const T: Record<Lang, ServiceCopy> = {
+  es: {
+    title: "Ingeniería Eléctrica Industrial en Querétaro | Avantrik",
+    description:
+      "Ingeniería eléctrica industrial en Querétaro. Diseño e instalación de sistemas de baja y media tensión, tableros eléctricos, auditorías de seguridad y eficiencia energética para empresas en Querétaro y el Bajío.",
+    heroTitle: "Ingeniería Eléctrica Industrial para Empresas",
+    heroSubtitle:
+      "Proyectos de ingeniería eléctrica industrial para plantas y edificios, enfocados en seguridad eléctrica, eficiencia energética y operación confiable en baja y media tensión.",
+    h2: "Servicios de Ingeniería Eléctrica Industrial",
+    intro:
+      "Nos especializamos en sistemas eléctricos de Baja y Media Tensión. Desde tableros principales hasta redes de distribución, aseguramos que su instalación tenga energía estable, segura y eficiente. Nuestros ingenieros diseñan sistemas que minimizan el tiempo de inactividad y soportan pesadas cargas industriales.",
+    cards: [
+      {
+        title: "Tableros y Distribución",
+        body: "Instalación y mantenimiento de tableros de baja/media tensión y transformadores.",
+      },
+      {
+        title: "Protección y Seguridad",
+        body: "Análisis de arco eléctrico, sistemas de tierras y protección contra sobretensiones.",
+      },
+    ],
+    listTitle: "Servicios Técnicos",
+    listItems: [
+      "Análisis de carga eléctrica y planeación de capacidad",
+      "Diseño de tableros de control y automatización industrial",
+      "Sistemas de energía de emergencia (Generadores/UPS)",
+      "Bancos de capacitores para corrección de factor de potencia",
+      "Retrofit de iluminación LED para naves industriales",
+    ],
+    sidebarTitle: "Auditoría de Seguridad Eléctrica",
+    sidebarBody:
+      "Asegúrese de que su infraestructura eléctrica cumpla con las normas de seguridad y estándares operativos vigentes.",
+    sidebarCta: "Programar Inspección",
+  },
+  en: {
+    title: "Industrial Electrical Engineering in Querétaro | Avantrik",
+    description:
+      "Industrial electrical engineering in Querétaro, Mexico. Design and installation of low- and medium-voltage systems, switchboards, safety audits and energy efficiency for companies across Querétaro and the Bajío region.",
+    heroTitle: "Industrial Electrical Engineering for Business",
+    heroSubtitle:
+      "Industrial electrical engineering projects for plants and buildings, focused on electrical safety, energy efficiency and reliable low- and medium-voltage operation.",
+    h2: "Industrial Electrical Engineering Services",
+    intro:
+      "We specialize in low- and medium-voltage electrical systems. From main switchboards to distribution networks, we make sure your facility runs on stable, safe and efficient power. Our engineers design systems that minimize downtime and carry heavy industrial loads.",
+    cards: [
+      {
+        title: "Switchboards and Distribution",
+        body: "Installation and maintenance of low/medium-voltage switchboards and transformers.",
+      },
+      {
+        title: "Protection and Safety",
+        body: "Arc flash analysis, grounding systems and surge protection.",
+      },
+    ],
+    listTitle: "Technical Services",
+    listItems: [
+      "Electrical load analysis and capacity planning",
+      "Control panel design and industrial automation",
+      "Emergency power systems (generators / UPS)",
+      "Capacitor banks for power factor correction",
+      "LED lighting retrofits for industrial facilities",
+    ],
+    sidebarTitle: "Electrical Safety Audit",
+    sidebarBody:
+      "Make sure your electrical infrastructure meets current safety regulations and operating standards.",
+    sidebarCta: "Schedule an Inspection",
+  },
+};
 
 export default function ElectricalEngineering() {
   return (
-    <Layout>    <Helmet>
-        <title>Ingeniería Eléctrica Industrial en Querétaro | Avantrik</title>
-
-        <meta
-          name="description"
-          content="Ingeniería eléctrica industrial en Querétaro. Diseño e instalación de sistemas de baja y media tensión, tableros eléctricos, auditorías de seguridad y eficiencia energética para empresas en Querétaro y el Bajío."
-        />
-
-        <link
-          rel="canonical"
-          href="https://www.avantrik.com/ingenieria-electrica"
-        />
-      </Helmet>
-
-      <div className="relative flex h-[52vh] min-h-[420px] items-center overflow-hidden bg-ink-gradient">
-        <TechBackdrop />
-        <div className="container mx-auto px-4 relative z-10 pt-24">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">Ingeniería Eléctrica Industrial para Empresas</h1>
-            <p className="text-xl text-gray-200 max-w-2xl">Proyectos de ingeniería eléctrica industrial para plantas y edificios, enfocados en
-            seguridad eléctrica, eficiencia energética y operación confiable en baja y media tensión.</p>
-        </div>
-      </div>
-
-      <section className="py-16 container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <Reveal className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">Servicios de Ingeniería Eléctrica Industrial</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Nos especializamos en sistemas eléctricos de Baja y Media Tensión. Desde tableros principales hasta redes de distribución, aseguramos que su instalación tenga energía estable, segura y eficiente. Nuestros ingenieros diseñan sistemas que minimizan el tiempo de inactividad y soportan pesadas cargas industriales.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
-                    <Zap className="w-10 h-10 text-accent mb-4" />
-                    <h3 className="font-heading font-bold text-xl mb-2">Tableros y Distribución</h3>
-                    <p className="text-sm text-muted-foreground">Instalación y mantenimiento de tableros de baja/media tensión y transformadores.</p>
-                </div>
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
-                    <ShieldCheck className="w-10 h-10 text-accent mb-4" />
-                    <h3 className="font-heading font-bold text-xl mb-2">Protección y Seguridad</h3>
-                    <p className="text-sm text-muted-foreground">Análisis de arco eléctrico, sistemas de tierras y protección contra sobretensiones.</p>
-                </div>
-            </div>
-
-            <h3 className="text-2xl font-heading font-bold text-foreground pt-8">Servicios Técnicos</h3>
-            <ul className="space-y-4">
-              {[
-                "Análisis de carga eléctrica y planeación de capacidad",
-                "Diseño de tableros de control y automatización industrial",
-                "Sistemas de energía de emergencia (Generadores/UPS)",
-                "Bancos de capacitores para corrección de factor de potencia",
-                "Retrofit de iluminación LED para naves industriales"
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-accent shrink-0" />
-                  <span className="text-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </Reveal>
-
-          <div className="lg:col-span-1">
-            <div className="bg-card shadow-lg border border-border p-8 rounded-sm sticky top-24">
-              <h3 className="font-heading font-bold text-2xl mb-4">Auditoría de Seguridad Eléctrica</h3>
-              <p className="text-muted-foreground mb-6">Asegúrese de que su infraestructura eléctrica cumpla con las normas de seguridad y estándares operativos vigentes.</p>
-              
-              <Link href="/contact">
-                <Button className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide mb-4">
-                  Programar Inspección
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-    </Layout>
+    <ServicePageTemplate
+      page="electrical"
+      copy={useCopy(T)}
+      cardIcons={[Zap, ShieldCheck]}
+    />
   );
 }

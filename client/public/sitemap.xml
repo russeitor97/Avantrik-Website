@@ -1,11 +1,131 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://www.avantrik.com/</loc><priority>1.0</priority></url>
-  <url><loc>https://www.avantrik.com/about</loc><priority>0.8</priority></url>
-  <url><loc>https://www.avantrik.com/contact</loc><priority>0.8</priority></url>
-  <url><loc>https://www.avantrik.com/calculadora-ahorro</loc><priority>0.7</priority></url>
-  <url><loc>https://www.avantrik.com/auditoria-energetica</loc><priority>0.9</priority></url>
-  <url><loc>https://www.avantrik.com/hvac-industrial</loc><priority>0.9</priority></url>
-  <url><loc>https://www.avantrik.com/ingenieria-electrica</loc><priority>0.9</priority></url>
-  <url><loc>https://www.avantrik.com/geotermia</loc><priority>0.9</priority></url>
+<!--
+  Sitemap bilingüe. Cada <url> declara sus alternativas con xhtml:link para que
+  Google entienda que /hvac-industrial y /en/industrial-hvac son la misma página
+  en distinto idioma (y no contenido duplicado). El español es el x-default
+  porque el mercado principal es Querétaro.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+    <loc>https://www.avantrik.com/</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/"/>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/"/>
+    <priority>0.9</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/about</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/about"/>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/about</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/about"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/about"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/about"/>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/contact</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/contact"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/contact"/>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/contact</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/contact"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/contact"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/contact"/>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/calculadora-ahorro</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/calculadora-ahorro"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/savings-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/calculadora-ahorro"/>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/savings-calculator</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/calculadora-ahorro"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/savings-calculator"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/calculadora-ahorro"/>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/auditoria-energetica</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/auditoria-energetica"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/energy-audits"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/auditoria-energetica"/>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/energy-audits</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/auditoria-energetica"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/energy-audits"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/auditoria-energetica"/>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/hvac-industrial</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/hvac-industrial"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/industrial-hvac"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/hvac-industrial"/>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/industrial-hvac</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/hvac-industrial"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/industrial-hvac"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/hvac-industrial"/>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/ingenieria-electrica</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/ingenieria-electrica"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/electrical-engineering"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/ingenieria-electrica"/>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/electrical-engineering</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/ingenieria-electrica"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/electrical-engineering"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/ingenieria-electrica"/>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.avantrik.com/geotermia</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/geotermia"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/geothermal-systems"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/geotermia"/>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.avantrik.com/en/geothermal-systems</loc>
+    <xhtml:link rel="alternate" hreflang="es-MX" href="https://www.avantrik.com/geotermia"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://www.avantrik.com/en/geothermal-systems"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://www.avantrik.com/geotermia"/>
+    <priority>0.8</priority>
+  </url>
+
 </urlset>

@@ -1,7 +1,7 @@
-import { HelmetProvider } from "react-helmet-async";
 import { Switch, Route } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
+import { useLang } from "@/lib/i18n";
 import { lazy, Suspense } from "react";
 
 import { Toaster } from "@/components/ui/toaster";
@@ -29,6 +29,7 @@ const NotFound = lazy(() => import("@/pages/not-found"));
 
 /** Loader mínimo de marca mientras se descarga el chunk de una página. */
 function PageLoader() {
+  const lang = useLang();
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
@@ -36,7 +37,7 @@ function PageLoader() {
           <div className="h-full w-1/2 animate-[loader-slide_1s_ease-in-out_infinite] rounded-full bg-accent" />
         </div>
         <span className="text-xs uppercase tracking-widest text-muted-foreground">
-          Cargando
+          {lang === "en" ? "Loading" : "Cargando"}
         </span>
       </div>
     </div>
@@ -59,6 +60,18 @@ function Router() {
         <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
         <Route path="/geotermia" component={GeothermalSystems} />
 
+        {/* Versión en inglés — mismos componentes, el idioma sale de la URL
+            (ver lib/i18n.ts). Los slugs están en inglés a propósito: son URLs
+            propias e indexables, no una traducción al vuelo. */}
+        <Route path="/en" component={Home} />
+        <Route path="/en/about" component={About} />
+        <Route path="/en/contact" component={Contact} />
+        <Route path="/en/savings-calculator" component={Calculadora} />
+        <Route path="/en/energy-audits" component={EnergyAudits} />
+        <Route path="/en/industrial-hvac" component={IndustrialHVAC} />
+        <Route path="/en/electrical-engineering" component={ElectricalEngineering} />
+        <Route path="/en/geothermal-systems" component={GeothermalSystems} />
+
         {/* Portal interno (privado, noindex) */}
         <Route path="/portal" component={Portal} />
         <Route path="/portal/compras" component={PortalCompras} />
@@ -72,14 +85,12 @@ function Router() {
 
 function App() {
   return (
-    <HelmetProvider>
-      <QueryClientProvider client={queryClient}>
-        <TooltipProvider>
-          <Toaster />
-          <Router />
-        </TooltipProvider>
-      </QueryClientProvider>
-    </HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Router />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

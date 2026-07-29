@@ -3,6 +3,7 @@ import { Link } from "wouter";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ShieldCheck, MapPin, Clock } from "lucide-react";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
+import { useHref, useLang } from "@/lib/i18n";
 
 interface HeroSectionProps {
   /** Optional — kept for API compatibility; no longer rendered as a raster image. */
@@ -15,21 +16,44 @@ interface HeroSectionProps {
   secondaryCtaLink?: string;
 }
 
-const trust = [
-  { icon: ShieldCheck, label: "ISO 9001" },
-  { icon: Clock, label: "+15 años" },
-  { icon: MapPin, label: "México · EE.UU." },
-];
+const T = {
+  es: {
+    eyebrow: "Excelencia en Ingeniería Industrial",
+    years: "+15 años",
+    region: "Querétaro · México",
+    cta: "Nuestros Servicios",
+    secondaryCta: "Contáctanos",
+  },
+  en: {
+    eyebrow: "Industrial Engineering Excellence",
+    years: "15+ years",
+    region: "Querétaro · Mexico",
+    cta: "Our Services",
+    secondaryCta: "Contact Us",
+  },
+};
 
 export function HeroSection({
   title,
   subtitle,
-  ctaText = "Our Services",
-  ctaLink = "/services",
-  secondaryCtaText = "Contact Us",
-  secondaryCtaLink = "/contact",
+  ctaText,
+  ctaLink,
+  secondaryCtaText,
+  secondaryCtaLink,
 }: HeroSectionProps) {
   const reduce = useReducedMotion();
+  const lang = useLang();
+  const href = useHref();
+  const t = T[lang];
+
+  const trust = [
+    { icon: ShieldCheck, label: "ISO 9001" },
+    { icon: Clock, label: t.years },
+    { icon: MapPin, label: t.region },
+  ];
+
+  const primaryHref = ctaLink ?? href("contact");
+  const secondaryHref = secondaryCtaLink ?? href("contact");
 
   return (
     <section className="relative flex min-h-[88vh] items-center overflow-hidden bg-ink-gradient text-white">
@@ -50,7 +74,7 @@ export function HeroSection({
           <div className="mb-6 inline-flex items-center gap-3 border-l-4 border-accent bg-white/5 px-4 py-2 backdrop-blur-sm">
             <span className="h-2 w-2 rounded-full bg-accent" />
             <p className="text-accent font-bold tracking-widest uppercase text-xs">
-              Excelencia en Ingeniería Industrial
+              {t.eyebrow}
             </p>
           </div>
 
@@ -63,23 +87,23 @@ export function HeroSection({
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4">
-            <Link href={ctaLink}>
+            <Link href={primaryHref}>
               <Button
                 size="lg"
                 className="group bg-accent hover:bg-accent/90 text-accent-foreground font-bold text-base h-14 px-8 rounded-sm uppercase tracking-wide"
               >
-                {ctaText}
+                {ctaText ?? t.cta}
                 <ArrowRight className="ml-2 w-5 h-5 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
 
-            <Link href={secondaryCtaLink}>
+            <Link href={secondaryHref}>
               <Button
                 size="lg"
                 variant="outline"
                 className="border-white/30 bg-transparent text-white hover:bg-white/10 hover:text-white font-bold text-base h-14 px-8 rounded-sm uppercase tracking-wide"
               >
-                {secondaryCtaText}
+                {secondaryCtaText ?? t.secondaryCta}
               </Button>
             </Link>
           </div>

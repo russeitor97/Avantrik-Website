@@ -3,6 +3,7 @@ import { Footer } from "./Footer";
 import { ReactNode, useEffect } from "react";
 import { useLocation } from "wouter";
 import { MessageCircle } from "lucide-react";
+import { useLang } from "@/lib/i18n";
 
 interface LayoutProps {
   children: ReactNode;
@@ -10,6 +11,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [location] = useLocation();
+  const lang = useLang();
 
   // Al navegar a otra página, volver al inicio (evita quedar a media página).
   useEffect(() => {
@@ -30,7 +32,7 @@ export function Layout({ children }: LayoutProps) {
         target="_blank"
         rel="noopener noreferrer"
         className="fixed bottom-6 right-6 z-50 flex items-center justify-center rounded-full bg-[#25D366] p-3 text-white shadow-lg transition-transform duration-200 hover:scale-110"
-        aria-label="Contactar por WhatsApp"
+        aria-label={lang === "en" ? "Contact us on WhatsApp" : "Contactar por WhatsApp"}
       >
         {/* pulso suave */}
         <span

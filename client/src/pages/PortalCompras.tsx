@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Helmet } from "react-helmet-async";
+import { useSeo } from "@/lib/seo";
 import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,11 @@ function resizeImage(file: File): Promise<string> {
 type UploadStage = "form" | "procesando" | "preview" | "enviando" | "saved";
 
 export default function PortalCompras() {
+  useSeo({
+    lang: "es-MX",
+    title: "Registro de Compras | Portal Avantrik",
+    robots: "noindex, nofollow",
+  });
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const [items, setItems] = useState<Compra[]>([]);
@@ -282,11 +287,6 @@ export default function PortalCompras() {
 
   return (
     <Layout>
-      <Helmet>
-        <title>Registro de Compras | Portal Avantrik</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-
       {/* Header band */}
       <section className="relative overflow-hidden bg-ink-gradient pb-10 pt-28 text-primary-foreground">
         <TechBackdrop />

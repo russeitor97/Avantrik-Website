@@ -1,90 +1,82 @@
-import { Helmet } from "react-helmet-async";
-import { Layout } from "@/components/layout/Layout";
-import { Button } from "@/components/ui/button";
-import { Link } from "wouter";
-import { CheckCircle, Wind, Thermometer, Fan, Gauge } from "lucide-react";
-import { TechBackdrop } from "@/components/ui/tech-backdrop";
-import { Reveal } from "@/components/motion/Reveal";
+import { Thermometer, Fan } from "lucide-react";
+import { ServicePageTemplate, type ServiceCopy } from "@/components/services/ServicePageTemplate";
+import { useCopy, type Lang } from "@/lib/i18n";
+
+const T: Record<Lang, ServiceCopy> = {
+  es: {
+    title: "HVAC Industrial en Querétaro para Plantas y Edificios | Avantrik",
+    description:
+      "Sistemas HVAC industrial en Querétaro. Diseño, instalación y optimización de climatización industrial para plantas, procesos críticos y edificios de alto desempeño en Querétaro y el Bajío.",
+    heroTitle: "HVAC Industrial para Plantas y Edificios Industriales",
+    heroSubtitle:
+      "Diseño, instalación y optimización de sistemas HVAC industrial para plantas de manufactura y edificios industriales, enfocados en eficiencia energética, confiabilidad operativa y control térmico preciso.",
+    h2: "Sistemas HVAC Industriales para Procesos Críticos",
+    intro:
+      "Los entornos industriales requieren soluciones HVAC robustas que van más allá del confort. Diseñamos, instalamos y optimizamos sistemas que mantienen temperaturas críticas de proceso, aseguran la calidad del aire y operan con la máxima eficiencia energética bajo cargas pesadas.",
+    cards: [
+      {
+        title: "Ventilación y Filtración",
+        body: "Manejo de aire de alta capacidad para fábricas con polvo, humos o subproductos químicos.",
+      },
+      {
+        title: "Enfriamiento de Procesos",
+        body: "Chillers y torres de enfriamiento integrados directamente con las líneas de fabricación.",
+      },
+    ],
+    listTitle: "Nuestras Capacidades",
+    listItems: [
+      "Diseño e instalación de plantas de chillers a gran escala",
+      "Sistemas de Flujo de Refrigerante Variable (VRF)",
+      "Soluciones HVAC para salas blancas (Clean rooms)",
+      "Sistemas de ventilación con recuperación de calor",
+      "Integración de Sistemas de Gestión de Edificios (BMS) inteligentes",
+    ],
+    sidebarTitle: "¿Necesita una Actualización?",
+    sidebarBody:
+      "Los sistemas HVAC modernos pueden reducir los costos de energía hasta en un 40%. Evaluemos su configuración actual.",
+    sidebarCta: "Consultar a un Ingeniero",
+  },
+  en: {
+    title: "Industrial HVAC in Querétaro for Plants and Buildings | Avantrik",
+    description:
+      "Industrial HVAC systems in Querétaro, Mexico. Design, installation and optimization of industrial climate control for plants, critical processes and high-performance buildings across Querétaro and the Bajío region.",
+    heroTitle: "Industrial HVAC for Manufacturing Plants and Buildings",
+    heroSubtitle:
+      "Design, installation and optimization of industrial HVAC systems for manufacturing plants and industrial buildings, focused on energy efficiency, operational reliability and precise thermal control.",
+    h2: "Industrial HVAC Systems for Critical Processes",
+    intro:
+      "Industrial environments demand robust HVAC solutions that go well beyond comfort. We design, install and optimize systems that hold critical process temperatures, ensure air quality and run at peak energy efficiency under heavy loads.",
+    cards: [
+      {
+        title: "Ventilation and Filtration",
+        body: "High-capacity air handling for plants dealing with dust, fumes or chemical byproducts.",
+      },
+      {
+        title: "Process Cooling",
+        body: "Chillers and cooling towers integrated directly with your manufacturing lines.",
+      },
+    ],
+    listTitle: "Our Capabilities",
+    listItems: [
+      "Design and installation of large-scale chiller plants",
+      "Variable Refrigerant Flow (VRF) systems",
+      "Cleanroom HVAC solutions",
+      "Heat-recovery ventilation systems",
+      "Integration of smart Building Management Systems (BMS)",
+    ],
+    sidebarTitle: "Time for an Upgrade?",
+    sidebarBody:
+      "Modern HVAC systems can cut energy costs by up to 40%. Let's assess your current setup.",
+    sidebarCta: "Talk to an Engineer",
+  },
+};
 
 export default function IndustrialHVAC() {
   return (
-    <Layout>    <Helmet>
-        <title>HVAC Industrial en Querétaro para Plantas y Edificios | Avantrik</title>
-
-        <meta
-          name="description"
-          content="Sistemas HVAC industrial en Querétaro. Diseño, instalación y optimización de climatización industrial para plantas, procesos críticos y edificios de alto desempeño en Querétaro y el Bajío."
-        />
-
-        <link
-          rel="canonical"
-          href="https://www.avantrik.com/hvac-industrial"
-        />
-      </Helmet>
-
-      <div className="relative flex h-[52vh] min-h-[420px] items-center overflow-hidden bg-ink-gradient">
-        <TechBackdrop />
-        <div className="container mx-auto px-4 relative z-10 pt-24">
-            <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">HVAC Industrial para Plantas y Edificios Industriales
-</h1>
-            <p className="text-xl text-gray-200 max-w-2xl">
-              Diseño, instalación y optimización de sistemas HVAC industrial para plantas de manufactura y edificios industriales, enfocados en eficiencia energética, confiabilidad operativa y control térmico preciso.
-            </p>
-        </div>
-      </div>
-
-      <section className="py-16 container mx-auto px-4">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-          <Reveal className="lg:col-span-2 space-y-8">
-            <h2 className="text-3xl font-heading font-bold text-foreground">Sistemas HVAC Industriales para Procesos Críticos</h2>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              Los entornos industriales requieren soluciones HVAC robustas que van más allá del confort. Diseñamos, instalamos y optimizamos sistemas que mantienen temperaturas críticas de proceso, aseguran la calidad del aire y operan con la máxima eficiencia energética bajo cargas pesadas.
-            </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6">
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
-                    <Fan className="w-10 h-10 text-accent mb-4" />
-                    <h3 className="font-heading font-bold text-xl mb-2">Ventilación y Filtración</h3>
-                    <p className="text-sm text-muted-foreground">Manejo de aire de alta capacidad para fábricas con polvo, humos o subproductos químicos.</p>
-                </div>
-                <div className="bg-secondary/50 p-6 rounded-sm border border-border transition-all duration-300 hover:-translate-y-1 hover:border-accent/40 hover:shadow-md">
-                    <Thermometer className="w-10 h-10 text-accent mb-4" />
-                    <h3 className="font-heading font-bold text-xl mb-2">Enfriamiento de Procesos</h3>
-                    <p className="text-sm text-muted-foreground">Chillers y torres de enfriamiento integrados directamente con las líneas de fabricación.</p>
-                </div>
-            </div>
-
-            <h3 className="text-2xl font-heading font-bold text-foreground pt-8">Nuestras Capacidades</h3>
-            <ul className="space-y-4">
-              {[
-                "Diseño e instalación de plantas de chillers a gran escala",
-                "Sistemas de Flujo de Refrigerante Variable (VRF)",
-                "Soluciones HVAC para salas blancas (Clean rooms)",
-                "Sistemas de ventilación con recuperación de calor",
-                "Integración de Sistemas de Gestión de Edificios (BMS) inteligentes"
-              ].map((item, i) => (
-                <li key={i} className="flex items-start gap-3">
-                  <CheckCircle className="w-6 h-6 text-accent shrink-0" />
-                  <span className="text-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </Reveal>
-
-          <div className="lg:col-span-1">
-            <div className="bg-card shadow-lg border border-border p-8 rounded-sm sticky top-24">
-              <h3 className="font-heading font-bold text-2xl mb-4">¿Necesita una Actualización?</h3>
-              <p className="text-muted-foreground mb-6">Los sistemas HVAC modernos pueden reducir los costos de energía hasta en un 40%. Evaluemos su configuración actual.</p>
-              
-              <Link href="/contact">
-                <Button className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide mb-4">
-                  Consultar a un Ingeniero
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-    </Layout>
+    <ServicePageTemplate
+      page="hvac"
+      copy={useCopy(T)}
+      cardIcons={[Fan, Thermometer]}
+    />
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Helmet } from "react-helmet-async";
+import { useSeo } from "@/lib/seo";
 import { Link } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,11 @@ import { getSession, saveSession, clearSession } from "@/lib/portal-auth";
 import { Lock, LogOut, Receipt, ArrowRight, Loader2, LayoutGrid, ClipboardCheck } from "lucide-react";
 
 export default function Portal() {
+  useSeo({
+    lang: "es-MX",
+    title: "Portal | Avantrik",
+    robots: "noindex, nofollow",
+  });
   const [session, setSession] = useState(getSession());
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -59,11 +64,6 @@ export default function Portal() {
 
   return (
     <Layout>
-      <Helmet>
-        <title>Portal | Avantrik</title>
-        <meta name="robots" content="noindex, nofollow" />
-      </Helmet>
-
       <section className="relative flex min-h-[92vh] items-center overflow-hidden bg-ink-gradient py-24 text-primary-foreground">
         <TechBackdrop />
 

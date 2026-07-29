@@ -6,13 +6,54 @@ import { Slider } from "@/components/ui/slider";
 import { Calculator, ArrowRight, TrendingDown, Zap } from "lucide-react";
 import { Reveal } from "@/components/motion/Reveal";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
+import { useHref, useLang } from "@/lib/i18n";
 
-const fmt = (n: number) =>
-  n.toLocaleString("es-MX", {
+/** Los importes siguen en pesos: la operación y las tarifas CFE son mexicanas. */
+const makeFmt = (lang: "es" | "en") => (n: number) =>
+  n.toLocaleString(lang === "en" ? "en-US" : "es-MX", {
     style: "currency",
     currency: "MXN",
     maximumFractionDigits: 0,
   });
+
+const T = {
+  es: {
+    eyebrow: "Calculadora de ahorro",
+    headline: "¿Cuánto está perdiendo tu empresa cada mes?",
+    sub: "Calcula tu ahorro potencial en energía en menos de 2 minutos. Es gratis.",
+    cta: "Calcula tu ahorro",
+    potential: "Potencial de ahorro",
+    spendLabel: "Tu gasto mensual de energía",
+    spendAria: "Gasto mensual de energía en pesos",
+    min: "$100 mil",
+    max: "$3 millones",
+    couldSave: "Podrías estar ahorrando",
+    perMonth: "cada mes, solo en climatización",
+    todayLabel: "Climatización hoy",
+    automatedLabel: "Con automatización",
+    disclaimer:
+      "Estimación preliminar: 35% del gasto asociado a climatización y control manual actual.",
+    detailed: "Obtén tu cálculo detallado →",
+  },
+  en: {
+    eyebrow: "Savings calculator",
+    headline: "How much is your plant losing every month?",
+    sub: "Estimate your potential energy savings in under 2 minutes. It's free.",
+    cta: "Calculate your savings",
+    potential: "Savings potential",
+    spendLabel: "Your monthly energy spend",
+    spendAria: "Monthly energy spend in Mexican pesos",
+    min: "$100K",
+    max: "$3M",
+    couldSave: "You could be saving",
+    perMonth: "every month, on HVAC alone",
+    todayLabel: "HVAC today",
+    automatedLabel: "With automation",
+    disclaimer:
+      "Preliminary estimate: 35% of spend attributed to HVAC, assuming manual control today.",
+    detailed: "Get your detailed calculation →",
+  },
+};
 
 /**
  * Home protagonist section that drives visitors to the savings calculator.
@@ -27,6 +68,10 @@ const fmt = (n: number) =>
 export function CalculatorHero() {
   const reduce = useReducedMotion();
   const [monthlySpend, setMonthlySpend] = useState(800000);
+  const lang = useLang();
+  const href = useHref();
+  const t = T[lang];
+  const fmt = makeFmt(lang);
 
   const hvacCost = monthlySpend * 0.35; // % sugerido del gasto asociado a A/C
   const savingsLow = hvacCost * 0.15; // factor bajo (control manual)
@@ -45,26 +90,25 @@ export function CalculatorHero() {
           <div className="flex items-center gap-3 mb-4">
             <span className="h-px w-8 bg-accent" />
             <span className="text-accent font-bold tracking-widest uppercase text-xs">
-              Calculadora de ahorro
+              {t.eyebrow}
             </span>
           </div>
 
           <h2 className="text-3xl md:text-5xl font-heading font-bold leading-tight text-white">
-            ¿Cuánto está perdiendo tu empresa cada mes?
+            {t.headline}
           </h2>
 
           <p className="mt-5 max-w-lg text-lg text-primary-foreground/70 leading-relaxed">
-            Calcula tu ahorro potencial en energía en menos de 2 minutos. Es
-            gratis.
+            {t.sub}
           </p>
 
           <div className="mt-8 flex flex-col sm:flex-row gap-4">
-            <Link href="/calculadora-ahorro">
+            <Link href={href("calculator")}>
               <Button
                 size="lg"
                 className="group bg-accent text-accent-foreground hover:bg-accent/90 font-bold uppercase tracking-wide h-14 px-8 rounded-sm"
               >
-                <Calculator className="w-5 h-5 mr-2" /> Calcula tu ahorro
+                <Calculator className="w-5 h-5 mr-2" /> {t.cta}
                 <ArrowRight className="w-5 h-5 ml-2 transition-transform group-hover:translate-x-1" />
               </Button>
             </Link>
@@ -77,7 +121,7 @@ export function CalculatorHero() {
             <div className="flex items-center gap-2 text-accent">
               <TrendingDown className="w-5 h-5" />
               <span className="text-xs font-bold uppercase tracking-widest">
-                Potencial de ahorro
+                {t.potential}
               </span>
             </div>
 
@@ -88,7 +132,7 @@ export function CalculatorHero() {
                   htmlFor="gasto-slider"
                   className="text-sm text-primary-foreground/70"
                 >
-                  Tu gasto mensual de energía
+                  {t.spendLabel}
                 </label>
                 <span className="font-heading text-xl font-bold text-white whitespace-nowrap">
                   {fmt(monthlySpend)}
@@ -102,24 +146,24 @@ export function CalculatorHero() {
                 max={3000000}
                 step={50000}
                 className="mt-4"
-                aria-label="Gasto mensual de energía en pesos"
+                aria-label={t.spendAria}
               />
               <div className="mt-1.5 flex justify-between text-[11px] text-primary-foreground/40">
-                <span>$100 mil</span>
-                <span>$3 millones</span>
+                <span>{t.min}</span>
+                <span>{t.max}</span>
               </div>
             </div>
 
             {/* Resultado en vivo */}
             <div className="mt-6 rounded-sm border border-accent/30 bg-accent/10 p-4">
               <p className="text-xs uppercase tracking-wide font-medium text-primary-foreground/60 mb-1">
-                Podrías estar ahorrando
+                {t.couldSave}
               </p>
               <p className="font-heading text-2xl md:text-3xl font-bold text-accent text-glow-accent whitespace-nowrap">
                 {fmt(savingsLow)} — {fmt(savingsHigh)}
               </p>
               <p className="mt-1 text-xs text-primary-foreground/50">
-                cada mes, solo en climatización
+                {t.perMonth}
               </p>
             </div>
 
@@ -127,7 +171,7 @@ export function CalculatorHero() {
             <div className="mt-6 space-y-3" aria-hidden="true">
               <div>
                 <div className="mb-1 flex justify-between text-[11px] uppercase tracking-wide text-primary-foreground/50">
-                  <span>Climatización hoy</span>
+                  <span>{t.todayLabel}</span>
                   <span>{fmt(hvacCost)}</span>
                 </div>
                 <div className="h-2.5 w-full rounded-full bg-primary-foreground/15">
@@ -137,7 +181,7 @@ export function CalculatorHero() {
               <div>
                 <div className="mb-1 flex justify-between text-[11px] uppercase tracking-wide text-accent/80">
                   <span className="flex items-center gap-1">
-                    <Zap className="h-3 w-3" /> Con automatización
+                    <Zap className="h-3 w-3" /> {t.automatedLabel}
                   </span>
                   <span>≈ {fmt(hvacCost * (optimizedPct / 100))}</span>
                 </div>
@@ -153,11 +197,10 @@ export function CalculatorHero() {
             </div>
 
             <p className="mt-5 text-[11px] leading-relaxed text-primary-foreground/40">
-              Estimación preliminar: 35% del gasto asociado a climatización y
-              control manual actual.{" "}
-              <Link href="/calculadora-ahorro">
+              {t.disclaimer}{" "}
+              <Link href={href("calculator")}>
                 <a className="text-accent underline-offset-2 hover:underline">
-                  Obtén tu cálculo detallado →
+                  {t.detailed}
                 </a>
               </Link>
             </p>

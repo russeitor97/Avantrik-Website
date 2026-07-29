@@ -1,5 +1,5 @@
-import { Helmet } from "react-helmet-async";
 import { Layout } from "@/components/layout/Layout";
+import { Seo } from "@/components/Seo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Calculator, TrendingDown, Zap, Thermometer, Snowflake, ArrowRight, CheckCircle, Building2, Factory, Hotel, Briefcase, HelpCircle, Send } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -15,6 +15,7 @@ import * as z from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import emailjs from "@emailjs/browser";
+import { useHref, useLang, type Lang } from "@/lib/i18n";
 
 // ── EmailJS config (template dedicado de leads de Calculadora) ──
 const EMAILJS_SERVICE_ID = "service_wjgwyix";
@@ -22,59 +23,330 @@ const EMAILJS_TEMPLATE_ID = "template_qixz56c";
 const EMAILJS_PUBLIC_KEY = "UL19pglSyFo2jCc8s";
 // ─────────────────────────────────────────────────────────────────
 
-/* ─── Helpers ─── */
-const fmt = (n: number) =>
-  n.toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
+/* ─── Helpers ───
+   Los importes siguen en pesos: las tarifas CFE y la operación son mexicanas.
+   Solo cambia el formato de separadores según el idioma. */
+const makeFmt = (lang: Lang) => (n: number) =>
+  n.toLocaleString(lang === "en" ? "en-US" : "es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
 
-const fmtNum = (n: number) =>
-  n.toLocaleString("es-MX", { maximumFractionDigits: 0 });
+const makeFmtNum = (lang: Lang) => (n: number) =>
+  n.toLocaleString(lang === "en" ? "en-US" : "es-MX", { maximumFractionDigits: 0 });
 
+/** Siempre en español: viaja en el correo que lee el equipo de Avantrik. */
 const yesNo = (v: string) =>
   (({ no: "No", parcial: "Parcial", si: "Sí" }) as Record<string, string>)[v] || "No especificado";
 
-/* ─── Supuestos técnicos ─── */
+/* ─── Supuestos técnicos ───
+   Los números son la especificación oficial (Excel) y NO cambian con el
+   idioma; solo se traduce la etiqueta que ve el visitante. La etiqueta en
+   español se reutiliza en el correo interno. */
 const CONTROL_LEVELS = [
-  { value: "manual", label: "Manual / sin control automático", low: 0.15, high: 0.25, msg: "Alto potencial de ahorro mediante horarios, arranques escalonados, variadores y control centralizado." },
-  { value: "parcial", label: "Control parcial o por horarios básicos", low: 0.08, high: 0.18, msg: "Existe oportunidad de optimizar horarios, secuencias, ajustes de temperatura y monitoreo." },
-  { value: "automatico", label: "Sistema automático existente sin optimización", low: 0.05, high: 0.12, msg: "El ahorro puede venir de revisar tendencias, alarmas, secuencias y ajustes operativos." },
-  { value: "optimizado", label: "Sistema bien controlado", low: 0.03, high: 0.08, msg: "El potencial principal está en ajustes finos, medición y verificación continua." },
+  { value: "manual", label: { es: "Manual / sin control automático", en: "Manual / no automatic control" }, low: 0.15, high: 0.25, msg: { es: "Alto potencial de ahorro mediante horarios, arranques escalonados, variadores y control centralizado.", en: "High savings potential through scheduling, staged starts, variable speed drives and centralized control." } },
+  { value: "parcial", label: { es: "Control parcial o por horarios básicos", en: "Partial control or basic scheduling" }, low: 0.08, high: 0.18, msg: { es: "Existe oportunidad de optimizar horarios, secuencias, ajustes de temperatura y monitoreo.", en: "There is room to optimize schedules, sequences, temperature setpoints and monitoring." } },
+  { value: "automatico", label: { es: "Sistema automático existente sin optimización", en: "Existing automatic system, not optimized" }, low: 0.05, high: 0.12, msg: { es: "El ahorro puede venir de revisar tendencias, alarmas, secuencias y ajustes operativos.", en: "Savings can come from reviewing trends, alarms, sequences and operating setpoints." } },
+  { value: "optimizado", label: { es: "Sistema bien controlado", en: "Well-controlled system" }, low: 0.03, high: 0.08, msg: { es: "El potencial principal está en ajustes finos, medición y verificación continua.", en: "The main potential lies in fine tuning, metering and continuous verification." } },
 ];
 
 const BUILDING_TYPES = [
-  { value: "industrial", label: "Planta industrial", icon: Factory, low: 0.25, high: 0.45, suggested: 0.35 },
-  { value: "plaza", label: "Plaza comercial", icon: Building2, low: 0.35, high: 0.55, suggested: 0.45 },
-  { value: "hotel", label: "Hotel", icon: Hotel, low: 0.30, high: 0.50, suggested: 0.40 },
-  { value: "oficinas", label: "Oficinas", icon: Briefcase, low: 0.30, high: 0.45, suggested: 0.38 },
-  { value: "otro", label: "Otro", icon: Building2, low: 0.25, high: 0.40, suggested: 0.33 },
+  { value: "industrial", label: { es: "Planta industrial", en: "Industrial plant" }, icon: Factory, low: 0.25, high: 0.45, suggested: 0.35 },
+  { value: "plaza", label: { es: "Plaza comercial", en: "Shopping center" }, icon: Building2, low: 0.35, high: 0.55, suggested: 0.45 },
+  { value: "hotel", label: { es: "Hotel", en: "Hotel" }, icon: Hotel, low: 0.30, high: 0.50, suggested: 0.40 },
+  { value: "oficinas", label: { es: "Oficinas", en: "Offices" }, icon: Briefcase, low: 0.30, high: 0.45, suggested: 0.38 },
+  { value: "otro", label: { es: "Otro", en: "Other" }, icon: Building2, low: 0.25, high: 0.40, suggested: 0.33 },
 ];
 
 const SYSTEM_CONDITIONS = [
-  { value: "eficiente", label: "Eficiente", kwPerTon: 0.75 },
-  { value: "promedio", label: "Promedio (no conozco el dato)", kwPerTon: 1.0 },
-  { value: "ineficiente", label: "Ineficiente / con oportunidad de mejora", kwPerTon: 1.3 },
+  { value: "eficiente", label: { es: "Eficiente", en: "Efficient" }, kwPerTon: 0.75 },
+  { value: "promedio", label: { es: "Promedio (no conozco el dato)", en: "Average (I don't know the figure)" }, kwPerTon: 1.0 },
+  { value: "ineficiente", label: { es: "Ineficiente / con oportunidad de mejora", en: "Inefficient / room for improvement" }, kwPerTon: 1.3 },
 ];
 
 const PLANT_CONDITIONS = [
-  { value: "sin_secuencia", label: "Sin secuencia clara de chillers", low: 0.05, high: 0.15 },
-  { value: "bombas", label: "Bombas sin variador de velocidad", low: 0.10, high: 0.25 },
-  { value: "baja_dt", label: "Baja diferencia de temperatura en agua helada", low: 0.08, high: 0.20 },
-  { value: "ajustes", label: "Ajustes de temperatura y horarios no optimizados", low: 0.03, high: 0.10 },
-  { value: "no_sabe", label: "No conozco la condición", low: 0.05, high: 0.12 },
+  { value: "sin_secuencia", label: { es: "Sin secuencia clara de chillers", en: "No clear chiller sequencing" }, low: 0.05, high: 0.15 },
+  { value: "bombas", label: { es: "Bombas sin variador de velocidad", en: "Pumps without variable speed drives" }, low: 0.10, high: 0.25 },
+  { value: "baja_dt", label: { es: "Baja diferencia de temperatura en agua helada", en: "Low chilled water temperature difference" }, low: 0.08, high: 0.20 },
+  { value: "ajustes", label: { es: "Ajustes de temperatura y horarios no optimizados", en: "Temperature setpoints and schedules not optimized" }, low: 0.03, high: 0.10 },
+  { value: "no_sabe", label: { es: "No conozco la condición", en: "I don't know the condition" }, low: 0.05, high: 0.12 },
 ];
 
-/* ─── Lead capture schema ─── */
-const leadSchema = z.object({
-  nombre: z.string().min(2, "Ingresa tu nombre"),
-  empresa: z.string().min(2, "Ingresa el nombre de tu empresa"),
-  correo: z.string().email("Correo electrónico inválido"),
-  telefono: z.string().min(10, "Ingresa un teléfono válido"),
-  ciudad: z.string().min(2, "Ingresa tu ciudad"),
-});
+/* ═══════════════════ Textos ═══════════════════ */
+const T = {
+  es: {
+    metaTitle: "Calculadora de Ahorro Energético HVAC en Querétaro | Avantrik",
+    metaDescription:
+      "Calcula cuánto puedes ahorrar en energía eléctrica con automatización de aire acondicionado, almacenamiento térmico y optimización de planta de agua helada.",
+    heroBadge: "Herramienta gratuita",
+    heroTitle: "Calculadora de Ahorro Energético HVAC",
+    heroSubtitle:
+      "Estima cuánto puede ahorrar tu empresa en energía eléctrica. Selecciona una calculadora, ingresa los datos de tu instalación y obtén un estimado preliminar en menos de 2 minutos.",
+    tabs: { automation: "Automatización A/C", storage: "Almacenamiento Térmico", plant: "Planta de Agua Helada" },
+    sections: {
+      automation: {
+        title: "Ahorro por Automatización del Aire Acondicionado",
+        body: "Estima ahorros por horarios inteligentes, control automático, arranques escalonados, variadores de velocidad y mejores ajustes de operación.",
+      },
+      storage: {
+        title: "Reducción de Demanda con Almacenamiento Térmico",
+        body: "Estima cuánto enfriamiento podrías mover a otro horario y cuánto podrías reducir tu demanda eléctrica pico.",
+      },
+      plant: {
+        title: "Optimización de Planta de Agua Helada",
+        body: "Estima el ahorro por mejorar operación de chillers, bombas, temperaturas, horarios y secuencias de control.",
+      },
+    },
+    lead: {
+      title: "Ver resultados completos",
+      subtitle: "Ingresa tus datos para recibir tu estimación detallada y que un ingeniero te contacte.",
+      name: "Nombre", namePlaceholder: "Tu nombre",
+      company: "Empresa", companyPlaceholder: "Nombre de tu empresa",
+      email: "Correo", emailPlaceholder: "correo@empresa.com",
+      phone: "Teléfono", phonePlaceholder: "+52 000-000-0000",
+      city: "Ciudad", cityPlaceholder: "Ej. Querétaro, Monterrey, CDMX...",
+      sending: "Enviando...",
+      submit: "Ver mi estimación y solicitar diagnóstico",
+      successTitle: "¡Listo!",
+      successBody: "En breve un ingeniero de Avantrik te contactará con tu diagnóstico personalizado.",
+      errorTitle: "Error al enviar",
+      errorBody: "Hubo un problema al enviar tus datos. Intenta de nuevo o escríbenos a info@avantrik.com",
+      errors: {
+        name: "Ingresa tu nombre",
+        company: "Ingresa el nombre de tu empresa",
+        email: "Correo electrónico inválido",
+        phone: "Ingresa un teléfono válido",
+        city: "Ingresa tu ciudad",
+      },
+    },
+    common: {
+      preliminary: "Estimación preliminar",
+      monthlySavings: "Ahorro mensual estimado",
+      annualSavings: "Ahorro anual estimado",
+      savingsFactor: "Factor de ahorro estimado",
+      simplePayback: "Retorno simple estimado",
+      months: "meses",
+      to: "a",
+      investment: "Inversión estimada para implementación (MXN, opcional)",
+      calculate: "Calcular ahorro estimado",
+      received: "¡Datos recibidos!",
+      selectPlaceholder: "Selecciona",
+      notSpecified: "No especificado",
+    },
+    calc1: {
+      formTitle: "Datos de tu instalación",
+      buildingType: "Tipo de inmueble",
+      buildingPlaceholder: "Selecciona el tipo",
+      monthlyCost: "Gasto mensual de energía eléctrica (MXN)",
+      monthlyCostHelp: "Monto total de tu recibo de luz mensual.",
+      hvacPercent: "% del gasto asociado al aire acondicionado",
+      typicalRange: (label: string, low: number, high: number, suggested: number) =>
+        `Rango típico para ${label}: ${low}% a ${high}%. Valor sugerido: ${suggested}%.`,
+      hoursDay: "Horas de operación al día",
+      daysWeek: "Días de operación por semana",
+      controlLevel: "¿Cómo se controla hoy tu aire acondicionado?",
+      controlPlaceholder: "Selecciona el nivel de control",
+      vfd: "¿Cuenta con variadores de velocidad en ventiladores o bombas?",
+      vfdOptions: { no: "No", parcial: "Parcial", si: "Sí, en la mayoría" },
+      hvacMonthly: "Gasto mensual en climatización",
+      emptyState: "Completa los datos de tu instalación para ver tu estimación de ahorro.",
+      receivedBody: "Un ingeniero de Avantrik te contactará pronto para agendar tu diagnóstico HVAC personalizado.",
+      disclaimer:
+        "Los resultados son estimaciones preliminares basadas en supuestos generales de operación. El ahorro real debe validarse mediante diagnóstico energético, revisión de recibos eléctricos, mediciones en sitio y análisis operativo del sistema HVAC.",
+    },
+    calc2: {
+      formTitle: "Datos de tu sistema de enfriamiento",
+      monthlyCost: "Gasto mensual total de energía eléctrica (MXN)",
+      peakDemand: "Demanda máxima registrada (kW)",
+      peakDemandHelp: "Puedes encontrar este dato en tu recibo eléctrico de CFE.",
+      demandCharge: "Cargo aproximado por demanda (MXN/kW-mes)",
+      capacity: "Capacidad instalada de enfriamiento (toneladas de refrigeración)",
+      capacityHelp: "1 TR = tonelada de refrigeración ≈ 3.517 kW térmicos.",
+      shiftPercent: "% de carga que se busca mover a otro horario",
+      dischargeHours: "Horas de enfriamiento a cubrir con almacenamiento",
+      systemCondition: "Condición del sistema de enfriamiento actual",
+      calculate: "Calcular reducción de demanda",
+      shiftedLoad: "Carga de enfriamiento desplazada",
+      storageCapacity: "Capacidad de almacenamiento",
+      demandReduction: "Reducción estimada de demanda",
+      demandSavings: "Ahorro mensual por demanda",
+      totalMonthly: "Ahorro mensual total estimado",
+      note: "Almacenamiento parcial recomendado. Permite reducir la demanda pico sin reemplazar los chillers existentes.",
+      emptyState: "Completa los datos para estimar la reducción de demanda con almacenamiento térmico.",
+      receivedBody: "Un ingeniero te contactará para evaluar tu proyecto TES.",
+      disclaimer:
+        "El almacenamiento térmico debe validarse con perfil horario de carga, recibos eléctricos, horarios tarifarios, operación real de chillers, espacio disponible, hidráulica y costo de implementación. Este resultado solo sirve como pre-diagnóstico comercial.",
+      tonHr: "ton-hr",
+    },
+    calc3: {
+      formTitle: "Datos de tu planta de agua helada",
+      operatingTons: "Capacidad promedio de enfriamiento en operación (TR)",
+      operatingTonsHelp: "Toneladas promedio de operación, no la capacidad instalada.",
+      hoursYear: "Horas de operación al año",
+      kwPerTon: "Consumo actual estimado del sistema (kW por tonelada)",
+      kwPerTonHelp: "Si no conoces este dato, usa 1.10 como referencia.",
+      energyCost: "Costo promedio de energía (MXN/kWh)",
+      currentDT: "ΔT actual del agua helada (°F)",
+      designDT: "ΔT de diseño (°F)",
+      pumpsVFD: "¿Las bombas tienen variador?",
+      trends: "¿Hay medición o tendencias?",
+      trendsOptions: { no: "No", parcial: "Parcial", si: "Sí, completo" },
+      vfdOptions: { no: "No", parcial: "Parcial", si: "Sí" },
+      mainCondition: "Condición principal observada",
+      conditionPlaceholder: "Selecciona la condición",
+      annualConsumption: "Consumo anual estimado",
+      annualCost: "Costo anual de operación",
+      lowDTWarning: "⚠ Posible baja diferencia de temperatura: el sistema mueve más agua de la necesaria.",
+      recommendation: "Recomendación: realizar retro-commissioning y validación de setpoints, tendencias y alarmas.",
+      emptyState: "Completa los datos de tu planta para estimar el potencial de optimización.",
+      receivedBody: "Un ingeniero te contactará para agendar tu revisión de planta.",
+      disclaimer:
+        "Este cálculo no sustituye un estudio de ingeniería. Para confirmar ahorros se requiere revisar tendencias, temperaturas de suministro y retorno, flujo, operación de bombas, secuencia de chillers, recibos eléctricos y condiciones reales de carga.",
+    },
+    cta: {
+      title: "¿Quieres un diagnóstico real?",
+      body: "Las calculadoras dan estimados preliminares. Para confirmar tus ahorros, nuestros ingenieros realizan mediciones en sitio, revisan recibos y analizan la operación real de tu sistema.",
+      button: "Solicitar diagnóstico HVAC",
+    },
+  },
+  en: {
+    metaTitle: "HVAC Energy Savings Calculator in Querétaro | Avantrik",
+    metaDescription:
+      "Estimate how much you can save on electricity through HVAC automation, thermal energy storage and chilled water plant optimization.",
+    heroBadge: "Free tool",
+    heroTitle: "HVAC Energy Savings Calculator",
+    heroSubtitle:
+      "Estimate how much your company could save on electricity. Pick a calculator, enter your facility data and get a preliminary estimate in under 2 minutes.",
+    tabs: { automation: "HVAC Automation", storage: "Thermal Storage", plant: "Chilled Water Plant" },
+    sections: {
+      automation: {
+        title: "Savings from HVAC Automation",
+        body: "Estimate savings from smart scheduling, automatic control, staged starts, variable speed drives and better operating setpoints.",
+      },
+      storage: {
+        title: "Demand Reduction with Thermal Energy Storage",
+        body: "Estimate how much cooling you could shift to off-peak hours and how far you could cut your peak electrical demand.",
+      },
+      plant: {
+        title: "Chilled Water Plant Optimization",
+        body: "Estimate savings from improving chiller and pump operation, temperatures, schedules and control sequences.",
+      },
+    },
+    lead: {
+      title: "See full results",
+      subtitle: "Enter your details to get your detailed estimate and have an engineer contact you.",
+      name: "Name", namePlaceholder: "Your name",
+      company: "Company", companyPlaceholder: "Your company name",
+      email: "Email", emailPlaceholder: "you@company.com",
+      phone: "Phone", phonePlaceholder: "+52 000-000-0000",
+      city: "City", cityPlaceholder: "e.g. Querétaro, Monterrey, Mexico City...",
+      sending: "Sending...",
+      submit: "See my estimate and request a diagnosis",
+      successTitle: "All set!",
+      successBody: "An Avantrik engineer will contact you shortly with your personalized diagnosis.",
+      errorTitle: "Could not send",
+      errorBody: "There was a problem sending your details. Please try again or email us at info@avantrik.com",
+      errors: {
+        name: "Enter your name",
+        company: "Enter your company name",
+        email: "Invalid email address",
+        phone: "Enter a valid phone number",
+        city: "Enter your city",
+      },
+    },
+    common: {
+      preliminary: "Preliminary estimate",
+      monthlySavings: "Estimated monthly savings",
+      annualSavings: "Estimated annual savings",
+      savingsFactor: "Estimated savings factor",
+      simplePayback: "Estimated simple payback",
+      months: "months",
+      to: "to",
+      investment: "Estimated implementation investment (MXN, optional)",
+      calculate: "Calculate estimated savings",
+      received: "Details received!",
+      selectPlaceholder: "Select",
+      notSpecified: "Not specified",
+    },
+    calc1: {
+      formTitle: "Your facility data",
+      buildingType: "Building type",
+      buildingPlaceholder: "Select the type",
+      monthlyCost: "Monthly electricity spend (MXN)",
+      monthlyCostHelp: "Total amount on your monthly electricity bill.",
+      hvacPercent: "% of spend attributed to air conditioning",
+      typicalRange: (label: string, low: number, high: number, suggested: number) =>
+        `Typical range for ${label}: ${low}% to ${high}%. Suggested value: ${suggested}%.`,
+      hoursDay: "Operating hours per day",
+      daysWeek: "Operating days per week",
+      controlLevel: "How is your air conditioning controlled today?",
+      controlPlaceholder: "Select the control level",
+      vfd: "Do you have variable speed drives on fans or pumps?",
+      vfdOptions: { no: "No", parcial: "Partial", si: "Yes, on most" },
+      hvacMonthly: "Monthly HVAC spend",
+      emptyState: "Fill in your facility data to see your savings estimate.",
+      receivedBody: "An Avantrik engineer will contact you soon to schedule your personalized HVAC diagnosis.",
+      disclaimer:
+        "Results are preliminary estimates based on general operating assumptions. Actual savings must be validated through an energy audit, review of electricity bills, on-site measurements and operational analysis of the HVAC system.",
+    },
+    calc2: {
+      formTitle: "Your cooling system data",
+      monthlyCost: "Total monthly electricity spend (MXN)",
+      peakDemand: "Recorded peak demand (kW)",
+      peakDemandHelp: "You can find this figure on your CFE electricity bill.",
+      demandCharge: "Approximate demand charge (MXN/kW-month)",
+      capacity: "Installed cooling capacity (refrigeration tons)",
+      capacityHelp: "1 RT = refrigeration ton ≈ 3.517 kW thermal.",
+      shiftPercent: "% of load you want to shift to another time of day",
+      dischargeHours: "Cooling hours to cover with storage",
+      systemCondition: "Condition of your current cooling system",
+      calculate: "Calculate demand reduction",
+      shiftedLoad: "Shifted cooling load",
+      storageCapacity: "Storage capacity",
+      demandReduction: "Estimated demand reduction",
+      demandSavings: "Monthly savings from demand",
+      totalMonthly: "Estimated total monthly savings",
+      note: "Partial storage recommended. It reduces peak demand without replacing your existing chillers.",
+      emptyState: "Fill in the data to estimate demand reduction with thermal energy storage.",
+      receivedBody: "An engineer will contact you to evaluate your TES project.",
+      disclaimer:
+        "Thermal storage must be validated with an hourly load profile, electricity bills, tariff schedules, actual chiller operation, available space, hydraulics and implementation cost. This result serves only as a commercial pre-assessment.",
+      tonHr: "ton-hr",
+    },
+    calc3: {
+      formTitle: "Your chilled water plant data",
+      operatingTons: "Average operating cooling capacity (RT)",
+      operatingTonsHelp: "Average operating tons, not installed capacity.",
+      hoursYear: "Operating hours per year",
+      kwPerTon: "Estimated current system consumption (kW per ton)",
+      kwPerTonHelp: "If you don't know this figure, use 1.10 as a reference.",
+      energyCost: "Average energy cost (MXN/kWh)",
+      currentDT: "Current chilled water ΔT (°F)",
+      designDT: "Design ΔT (°F)",
+      pumpsVFD: "Do the pumps have variable speed drives?",
+      trends: "Is there metering or trending?",
+      trendsOptions: { no: "No", parcial: "Partial", si: "Yes, complete" },
+      vfdOptions: { no: "No", parcial: "Partial", si: "Yes" },
+      mainCondition: "Main observed condition",
+      conditionPlaceholder: "Select the condition",
+      annualConsumption: "Estimated annual consumption",
+      annualCost: "Annual operating cost",
+      lowDTWarning: "⚠ Possible low temperature difference: the system is moving more water than needed.",
+      recommendation: "Recommendation: perform retro-commissioning and validate setpoints, trends and alarms.",
+      emptyState: "Fill in your plant data to estimate the optimization potential.",
+      receivedBody: "An engineer will contact you to schedule your plant review.",
+      disclaimer:
+        "This calculation does not replace an engineering study. Confirming savings requires reviewing trends, supply and return temperatures, flow, pump operation, chiller sequencing, electricity bills and actual load conditions.",
+    },
+    cta: {
+      title: "Want a real diagnosis?",
+      body: "The calculators give preliminary estimates. To confirm your savings, our engineers take on-site measurements, review bills and analyze how your system actually runs.",
+      button: "Request an HVAC diagnosis",
+    },
+  },
+};
 
 /* ─── Datos técnicos + resultados que cada calculadora envía por correo ─── */
 type LeadPayload = {
   calculatorType: string;   // "Automatización A/C", "Almacenamiento Térmico", "Planta Agua Helada"
-  calculationData: string;  // resumen de los datos técnicos capturados
+  calculationData: string;  // resumen de los datos técnicos capturados (siempre en español)
   monthlySavings: string;
   annualSavings: string;
   roi: string;
@@ -88,6 +360,21 @@ function LeadForm({ payload, onComplete }: {
 }) {
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
+  const lang = useLang();
+  const t = T[lang].lead;
+
+  const leadSchema = useMemo(
+    () =>
+      z.object({
+        nombre: z.string().min(2, t.errors.name),
+        empresa: z.string().min(2, t.errors.company),
+        correo: z.string().email(t.errors.email),
+        telefono: z.string().min(10, t.errors.phone),
+        ciudad: z.string().min(2, t.errors.city),
+      }),
+    [t],
+  );
+
   const form = useForm<z.infer<typeof leadSchema>>({
     resolver: zodResolver(leadSchema),
     defaultValues: { nombre: "", empresa: "", correo: "", telefono: "", ciudad: "" },
@@ -118,16 +405,15 @@ function LeadForm({ payload, onComplete }: {
       );
 
       toast({
-        title: "¡Listo!",
-        description: "En breve un ingeniero de Avantrik te contactará con tu diagnóstico personalizado.",
+        title: t.successTitle,
+        description: t.successBody,
       });
       onComplete();
     } catch (error) {
       console.error("EmailJS error:", error);
       toast({
-        title: "Error al enviar",
-        description:
-          "Hubo un problema al enviar tus datos. Intenta de nuevo o escríbenos a info@avantrik.com",
+        title: t.errorTitle,
+        description: t.errorBody,
         variant: "destructive",
       });
     } finally {
@@ -137,24 +423,24 @@ function LeadForm({ payload, onComplete }: {
 
   return (
     <div className="bg-primary text-primary-foreground p-8 rounded-sm shadow-lg">
-      <h3 className="font-heading font-bold text-2xl mb-2">Ver resultados completos</h3>
+      <h3 className="font-heading font-bold text-2xl mb-2">{t.title}</h3>
       <p className="text-primary-foreground/70 text-sm mb-6">
-        Ingresa tus datos para recibir tu estimación detallada y que un ingeniero te contacte.
+        {t.subtitle}
       </p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField control={form.control} name="nombre" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-primary-foreground/80 text-sm">Nombre</FormLabel>
-                <FormControl><Input placeholder="Tu nombre" {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
+                <FormLabel className="text-primary-foreground/80 text-sm">{t.name}</FormLabel>
+                <FormControl><Input placeholder={t.namePlaceholder} {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="empresa" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-primary-foreground/80 text-sm">Empresa</FormLabel>
-                <FormControl><Input placeholder="Nombre de tu empresa" {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
+                <FormLabel className="text-primary-foreground/80 text-sm">{t.company}</FormLabel>
+                <FormControl><Input placeholder={t.companyPlaceholder} {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
@@ -162,28 +448,28 @@ function LeadForm({ payload, onComplete }: {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <FormField control={form.control} name="correo" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-primary-foreground/80 text-sm">Correo</FormLabel>
-                <FormControl><Input placeholder="correo@empresa.com" {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
+                <FormLabel className="text-primary-foreground/80 text-sm">{t.email}</FormLabel>
+                <FormControl><Input placeholder={t.emailPlaceholder} {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
             <FormField control={form.control} name="telefono" render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-primary-foreground/80 text-sm">Teléfono</FormLabel>
-                <FormControl><Input placeholder="+52 000-000-0000" {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
+                <FormLabel className="text-primary-foreground/80 text-sm">{t.phone}</FormLabel>
+                <FormControl><Input placeholder={t.phonePlaceholder} {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
                 <FormMessage />
               </FormItem>
             )} />
           </div>
           <FormField control={form.control} name="ciudad" render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-primary-foreground/80 text-sm">Ciudad</FormLabel>
-              <FormControl><Input placeholder="Ej. Querétaro, Monterrey, CDMX..." {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
+              <FormLabel className="text-primary-foreground/80 text-sm">{t.city}</FormLabel>
+              <FormControl><Input placeholder={t.cityPlaceholder} {...field} className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground placeholder:text-primary-foreground/40" /></FormControl>
               <FormMessage />
             </FormItem>
           )} />
           <Button type="submit" disabled={sending} className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide hover:bg-accent/90">
-            <Send className="w-4 h-4 mr-2" /> {sending ? "Enviando..." : "Ver mi estimación y solicitar diagnóstico"}
+            <Send className="w-4 h-4 mr-2" /> {sending ? t.sending : t.submit}
           </Button>
         </form>
       </Form>
@@ -195,6 +481,11 @@ function LeadForm({ payload, onComplete }: {
    CALCULADORA 1 — Ahorro por Automatización A/C
    ═══════════════════════════════════════════════════ */
 function CalcAutomatizacion() {
+  const lang = useLang();
+  const c = T[lang].common;
+  const t = T[lang].calc1;
+  const fmt = makeFmt(lang);
+
   const [buildingType, setBuildingType] = useState("");
   const [monthlyCost, setMonthlyCost] = useState("");
   const [hvacPercent, setHvacPercent] = useState<number[]>([35]);
@@ -242,17 +533,17 @@ function CalcAutomatizacion() {
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-card border border-border p-6 rounded-sm shadow-sm space-y-6">
             <h3 className="font-heading font-bold text-xl text-primary flex items-center gap-2">
-              <Calculator className="w-5 h-5 text-accent" /> Datos de tu instalación
+              <Calculator className="w-5 h-5 text-accent" /> {t.formTitle}
             </h3>
 
             {/* Tipo de inmueble */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Tipo de inmueble</Label>
+              <Label className="text-sm font-medium">{t.buildingType}</Label>
               <Select value={buildingType} onValueChange={handleBuildingChange}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Selecciona el tipo" /></SelectTrigger>
+                <SelectTrigger className="bg-background"><SelectValue placeholder={t.buildingPlaceholder} /></SelectTrigger>
                 <SelectContent>
                   {BUILDING_TYPES.map(b => (
-                    <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                    <SelectItem key={b.value} value={b.value}>{b.label[lang]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -260,21 +551,21 @@ function CalcAutomatizacion() {
 
             {/* Gasto mensual */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Gasto mensual de energía eléctrica (MXN)</Label>
+              <Label className="text-sm font-medium">{t.monthlyCost}</Label>
               <Input
                 type="text"
-                placeholder="Ej. 800,000"
+                placeholder="800,000"
                 value={monthlyCost}
                 onChange={e => setMonthlyCost(e.target.value)}
                 className="bg-background"
               />
-              <p className="text-xs text-muted-foreground">Monto total de tu recibo de luz mensual.</p>
+              <p className="text-xs text-muted-foreground">{t.monthlyCostHelp}</p>
             </div>
 
             {/* % HVAC */}
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-sm font-medium">% del gasto asociado al aire acondicionado</Label>
+                <Label className="text-sm font-medium">{t.hvacPercent}</Label>
                 <span className="text-accent font-bold text-lg">{hvacPercent[0]}%</span>
               </div>
               <Slider
@@ -287,8 +578,12 @@ function CalcAutomatizacion() {
               />
               {building && (
                 <p className="text-xs text-muted-foreground">
-                  Rango típico para {building.label.toLowerCase()}: {Math.round(building.low * 100)}% a {Math.round(building.high * 100)}%.
-                  Valor sugerido: {Math.round(building.suggested * 100)}%.
+                  {t.typicalRange(
+                    building.label[lang].toLowerCase(),
+                    Math.round(building.low * 100),
+                    Math.round(building.high * 100),
+                    Math.round(building.suggested * 100),
+                  )}
                 </p>
               )}
             </div>
@@ -296,23 +591,23 @@ function CalcAutomatizacion() {
             {/* Horas y días */}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Horas de operación al día</Label>
-                <Input type="number" placeholder="Ej. 14" value={hoursDay} onChange={e => setHoursDay(e.target.value)} className="bg-background" />
+                <Label className="text-sm font-medium">{t.hoursDay}</Label>
+                <Input type="number" placeholder="14" value={hoursDay} onChange={e => setHoursDay(e.target.value)} className="bg-background" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">Días de operación por semana</Label>
-                <Input type="number" placeholder="Ej. 6" value={daysWeek} onChange={e => setDaysWeek(e.target.value)} className="bg-background" />
+                <Label className="text-sm font-medium">{t.daysWeek}</Label>
+                <Input type="number" placeholder="6" value={daysWeek} onChange={e => setDaysWeek(e.target.value)} className="bg-background" />
               </div>
             </div>
 
             {/* Nivel de control */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">¿Cómo se controla hoy tu aire acondicionado?</Label>
+              <Label className="text-sm font-medium">{t.controlLevel}</Label>
               <Select value={controlLevel} onValueChange={setControlLevel}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Selecciona el nivel de control" /></SelectTrigger>
+                <SelectTrigger className="bg-background"><SelectValue placeholder={t.controlPlaceholder} /></SelectTrigger>
                 <SelectContent>
                   {CONTROL_LEVELS.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    <SelectItem key={c.value} value={c.value}>{c.label[lang]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -320,23 +615,23 @@ function CalcAutomatizacion() {
 
             {/* Variadores */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">¿Cuenta con variadores de velocidad en ventiladores o bombas?</Label>
+              <Label className="text-sm font-medium">{t.vfd}</Label>
               <Select value={hasVFD} onValueChange={setHasVFD}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                <SelectTrigger className="bg-background"><SelectValue placeholder={c.selectPlaceholder} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="no">No</SelectItem>
-                  <SelectItem value="parcial">Parcial</SelectItem>
-                  <SelectItem value="si">Sí, en la mayoría</SelectItem>
+                  <SelectItem value="no">{t.vfdOptions.no}</SelectItem>
+                  <SelectItem value="parcial">{t.vfdOptions.parcial}</SelectItem>
+                  <SelectItem value="si">{t.vfdOptions.si}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {/* Inversión */}
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Inversión estimada para implementación (MXN, opcional)</Label>
+              <Label className="text-sm font-medium">{c.investment}</Label>
               <Input
                 type="text"
-                placeholder="Ej. 1,200,000"
+                placeholder="1,200,000"
                 value={investment}
                 onChange={e => setInvestment(e.target.value)}
                 className="bg-background"
@@ -348,7 +643,7 @@ function CalcAutomatizacion() {
               disabled={!canCalculate}
               className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide hover:bg-accent/90 h-12 text-base"
             >
-              <TrendingDown className="w-5 h-5 mr-2" /> Calcular ahorro estimado
+              <TrendingDown className="w-5 h-5 mr-2" /> {c.calculate}
             </Button>
           </div>
         </div>
@@ -359,35 +654,35 @@ function CalcAutomatizacion() {
             <>
               {/* Preview results (always shown) */}
               <div className="bg-secondary border border-border p-6 rounded-sm shadow-sm space-y-4">
-                <h3 className="font-heading font-bold text-lg text-primary">Estimación preliminar</h3>
+                <h3 className="font-heading font-bold text-lg text-primary">{c.preliminary}</h3>
 
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Gasto mensual en climatización</span>
+                    <span className="text-sm text-muted-foreground">{t.hvacMonthly}</span>
                     <span className="font-bold text-foreground">{fmt(hvacCost)}</span>
                   </div>
 
                   {control && (
                     <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-sm text-muted-foreground">Factor de ahorro estimado</span>
+                      <span className="text-sm text-muted-foreground">{c.savingsFactor}</span>
                       <span className="font-bold text-foreground">{(control.low * 100).toFixed(0)}% — {(control.high * 100).toFixed(0)}%</span>
                     </div>
                   )}
 
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">{c.monthlySavings}</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(savingsLow)} — {fmt(savingsHigh)}</p>
                   </div>
 
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro anual estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">{c.annualSavings}</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(annualLow)} — {fmt(annualHigh)}</p>
                   </div>
 
                   {inv > 0 && (
                     <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-sm text-muted-foreground">Retorno simple estimado</span>
-                      <span className="font-bold text-foreground">{roiLow.toFixed(0)} a {roiHigh.toFixed(0)} meses</span>
+                      <span className="text-sm text-muted-foreground">{c.simplePayback}</span>
+                      <span className="font-bold text-foreground">{roiLow.toFixed(0)} {c.to} {roiHigh.toFixed(0)} {c.months}</span>
                     </div>
                   )}
                 </div>
@@ -396,7 +691,7 @@ function CalcAutomatizacion() {
                   <div className="bg-primary/5 p-4 rounded-sm border border-primary/10">
                     <div className="flex gap-2">
                       <HelpCircle className="w-4 h-4 text-primary shrink-0 mt-0.5" />
-                      <p className="text-sm text-muted-foreground">{control.msg}</p>
+                      <p className="text-sm text-muted-foreground">{control.msg[lang]}</p>
                     </div>
                   </div>
                 )}
@@ -408,12 +703,12 @@ function CalcAutomatizacion() {
                   payload={{
                     calculatorType: "Automatización A/C",
                     calculationData: [
-                      `Tipo de inmueble: ${building?.label ?? "N/D"}`,
+                      `Tipo de inmueble: ${building?.label.es ?? "N/D"}`,
                       `Gasto mensual de energía: ${fmt(cost)}`,
                       `% asociado a A/C: ${hvacPercent[0]}%`,
                       `Gasto en climatización: ${fmt(hvacCost)}`,
                       `Operación: ${hoursDay} h/día, ${daysWeek} días/semana`,
-                      `Nivel de control actual: ${control?.label ?? "N/D"}`,
+                      `Nivel de control actual: ${control?.label.es ?? "N/D"}`,
                       `Variadores de velocidad: ${yesNo(hasVFD)}`,
                     ].join("\n"),
                     monthlySavings: `${fmt(savingsLow)} — ${fmt(savingsHigh)}`,
@@ -426,15 +721,15 @@ function CalcAutomatizacion() {
               ) : (
                 <div className="bg-accent/10 border border-accent/30 p-6 rounded-sm text-center">
                   <CheckCircle className="w-10 h-10 text-accent mx-auto mb-3" />
-                  <h4 className="font-heading font-bold text-lg mb-2">¡Datos recibidos!</h4>
-                  <p className="text-sm text-muted-foreground">Un ingeniero de Avantrik te contactará pronto para agendar tu diagnóstico HVAC personalizado.</p>
+                  <h4 className="font-heading font-bold text-lg mb-2">{c.received}</h4>
+                  <p className="text-sm text-muted-foreground">{t.receivedBody}</p>
                 </div>
               )}
             </>
           ) : (
             <div className="bg-secondary/50 border border-border p-8 rounded-sm text-center space-y-4">
               <Calculator className="w-12 h-12 text-muted-foreground/30 mx-auto" />
-              <p className="text-muted-foreground">Completa los datos de tu instalación para ver tu estimación de ahorro.</p>
+              <p className="text-muted-foreground">{t.emptyState}</p>
             </div>
           )}
         </div>
@@ -442,7 +737,7 @@ function CalcAutomatizacion() {
 
       {/* Disclaimer */}
       <p className="text-xs text-muted-foreground border-t border-border pt-4">
-        Los resultados son estimaciones preliminares basadas en supuestos generales de operación. El ahorro real debe validarse mediante diagnóstico energético, revisión de recibos eléctricos, mediciones en sitio y análisis operativo del sistema HVAC.
+        {t.disclaimer}
       </p>
     </div>
   );
@@ -452,6 +747,12 @@ function CalcAutomatizacion() {
    CALCULADORA 2 — Almacenamiento Térmico (TES)
    ═══════════════════════════════════════════════════ */
 function CalcAlmacenamiento() {
+  const lang = useLang();
+  const c = T[lang].common;
+  const t = T[lang].calc2;
+  const fmt = makeFmt(lang);
+  const fmtNum = makeFmtNum(lang);
+
   const [monthlyCost, setMonthlyCost] = useState("");
   const [peakDemand, setPeakDemand] = useState("");
   const [demandCharge, setDemandCharge] = useState("");
@@ -498,63 +799,63 @@ function CalcAlmacenamiento() {
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-card border border-border p-6 rounded-sm shadow-sm space-y-6">
             <h3 className="font-heading font-bold text-xl text-primary flex items-center gap-2">
-              <Snowflake className="w-5 h-5 text-accent" /> Datos de tu sistema de enfriamiento
+              <Snowflake className="w-5 h-5 text-accent" /> {t.formTitle}
             </h3>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Gasto mensual total de energía eléctrica (MXN)</Label>
-              <Input type="text" placeholder="Ej. 1,200,000" value={monthlyCost} onChange={e => setMonthlyCost(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{t.monthlyCost}</Label>
+              <Input type="text" placeholder="1,200,000" value={monthlyCost} onChange={e => setMonthlyCost(e.target.value)} className="bg-background" />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Demanda máxima registrada (kW)</Label>
-              <Input type="text" placeholder="Ej. 1,200" value={peakDemand} onChange={e => setPeakDemand(e.target.value)} className="bg-background" />
-              <p className="text-xs text-muted-foreground">Puedes encontrar este dato en tu recibo eléctrico de CFE.</p>
+              <Label className="text-sm font-medium">{t.peakDemand}</Label>
+              <Input type="text" placeholder="1,200" value={peakDemand} onChange={e => setPeakDemand(e.target.value)} className="bg-background" />
+              <p className="text-xs text-muted-foreground">{t.peakDemandHelp}</p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Cargo aproximado por demanda (MXN/kW-mes)</Label>
-              <Input type="text" placeholder="Ej. 500" value={demandCharge} onChange={e => setDemandCharge(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{t.demandCharge}</Label>
+              <Input type="text" placeholder="500" value={demandCharge} onChange={e => setDemandCharge(e.target.value)} className="bg-background" />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Capacidad instalada de enfriamiento (toneladas de refrigeración)</Label>
-              <Input type="text" placeholder="Ej. 800" value={coolingCapacity} onChange={e => setCoolingCapacity(e.target.value)} className="bg-background" />
-              <p className="text-xs text-muted-foreground">1 TR = tonelada de refrigeración ≈ 3.517 kW térmicos.</p>
+              <Label className="text-sm font-medium">{t.capacity}</Label>
+              <Input type="text" placeholder="800" value={coolingCapacity} onChange={e => setCoolingCapacity(e.target.value)} className="bg-background" />
+              <p className="text-xs text-muted-foreground">{t.capacityHelp}</p>
             </div>
 
             <div className="space-y-3">
               <div className="flex justify-between items-center">
-                <Label className="text-sm font-medium">% de carga que se busca mover a otro horario</Label>
+                <Label className="text-sm font-medium">{t.shiftPercent}</Label>
                 <span className="text-accent font-bold text-lg">{shiftPercent[0]}%</span>
               </div>
               <Slider value={shiftPercent} onValueChange={setShiftPercent} min={20} max={60} step={5} className="py-2" />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Horas de enfriamiento a cubrir con almacenamiento</Label>
-              <Input type="number" placeholder="Ej. 6" value={dischargeHours} onChange={e => setDischargeHours(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{t.dischargeHours}</Label>
+              <Input type="number" placeholder="6" value={dischargeHours} onChange={e => setDischargeHours(e.target.value)} className="bg-background" />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Condición del sistema de enfriamiento actual</Label>
+              <Label className="text-sm font-medium">{t.systemCondition}</Label>
               <Select value={systemCondition} onValueChange={setSystemCondition}>
                 <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {SYSTEM_CONDITIONS.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    <SelectItem key={c.value} value={c.value}>{c.label[lang]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Inversión estimada para implementación (MXN, opcional)</Label>
-              <Input type="text" placeholder="Ej. 9,500,000" value={investment} onChange={e => setInvestment(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{c.investment}</Label>
+              <Input type="text" placeholder="9,500,000" value={investment} onChange={e => setInvestment(e.target.value)} className="bg-background" />
             </div>
 
             <Button onClick={calculate} disabled={!canCalculate} className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide hover:bg-accent/90 h-12 text-base">
-              <TrendingDown className="w-5 h-5 mr-2" /> Calcular reducción de demanda
+              <TrendingDown className="w-5 h-5 mr-2" /> {t.calculate}
             </Button>
           </div>
         </div>
@@ -563,41 +864,41 @@ function CalcAlmacenamiento() {
           {showResults ? (
             <>
               <div className="bg-secondary border border-border p-6 rounded-sm shadow-sm space-y-4">
-                <h3 className="font-heading font-bold text-lg text-primary">Estimación preliminar</h3>
+                <h3 className="font-heading font-bold text-lg text-primary">{c.preliminary}</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Carga de enfriamiento desplazada</span>
+                    <span className="text-sm text-muted-foreground">{t.shiftedLoad}</span>
                     <span className="font-bold">{fmtNum(shiftedTons)} TR</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Capacidad de almacenamiento</span>
-                    <span className="font-bold">{fmtNum(storageCapacity)} ton-hr</span>
+                    <span className="text-sm text-muted-foreground">{t.storageCapacity}</span>
+                    <span className="font-bold">{fmtNum(storageCapacity)} {t.tonHr}</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Reducción estimada de demanda</span>
+                    <span className="text-sm text-muted-foreground">{t.demandReduction}</span>
                     <span className="font-bold">{fmtNum(demandReduction)} kW</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Ahorro mensual por demanda</span>
+                    <span className="text-sm text-muted-foreground">{t.demandSavings}</span>
                     <span className="font-bold">{fmt(demandSavings)}</span>
                   </div>
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual total estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">{t.totalMonthly}</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(totalSavingsLow)} — {fmt(totalSavingsHigh)}</p>
                   </div>
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro anual estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">{c.annualSavings}</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(annualLow)} — {fmt(annualHigh)}</p>
                   </div>
                   {inv > 0 && (
                     <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-sm text-muted-foreground">Retorno simple estimado</span>
-                      <span className="font-bold">{roiLow.toFixed(0)} a {roiHigh.toFixed(0)} meses</span>
+                      <span className="text-sm text-muted-foreground">{c.simplePayback}</span>
+                      <span className="font-bold">{roiLow.toFixed(0)} {c.to} {roiHigh.toFixed(0)} {c.months}</span>
                     </div>
                   )}
                 </div>
                 <div className="bg-primary/5 p-4 rounded-sm border border-primary/10">
-                  <p className="text-sm text-muted-foreground">Almacenamiento parcial recomendado. Permite reducir la demanda pico sin reemplazar los chillers existentes.</p>
+                  <p className="text-sm text-muted-foreground">{t.note}</p>
                 </div>
               </div>
               {!leadCaptured ? (
@@ -611,7 +912,7 @@ function CalcAlmacenamiento() {
                       `Capacidad instalada: ${fmtNum(capacity)} TR`,
                       `% de carga a desplazar: ${shiftPercent[0]}%`,
                       `Horas de descarga: ${hours}`,
-                      `Condición del sistema: ${condition?.label ?? "N/D"}`,
+                      `Condición del sistema: ${condition?.label.es ?? "N/D"}`,
                       `Carga desplazada: ${fmtNum(shiftedTons)} TR`,
                       `Reducción de demanda: ${fmtNum(demandReduction)} kW`,
                     ].join("\n"),
@@ -625,21 +926,21 @@ function CalcAlmacenamiento() {
               ) : (
                 <div className="bg-accent/10 border border-accent/30 p-6 rounded-sm text-center">
                   <CheckCircle className="w-10 h-10 text-accent mx-auto mb-3" />
-                  <h4 className="font-heading font-bold text-lg mb-2">¡Datos recibidos!</h4>
-                  <p className="text-sm text-muted-foreground">Un ingeniero te contactará para evaluar tu proyecto TES.</p>
+                  <h4 className="font-heading font-bold text-lg mb-2">{c.received}</h4>
+                  <p className="text-sm text-muted-foreground">{t.receivedBody}</p>
                 </div>
               )}
             </>
           ) : (
             <div className="bg-secondary/50 border border-border p-8 rounded-sm text-center space-y-4">
               <Snowflake className="w-12 h-12 text-muted-foreground/30 mx-auto" />
-              <p className="text-muted-foreground">Completa los datos para estimar la reducción de demanda con almacenamiento térmico.</p>
+              <p className="text-muted-foreground">{t.emptyState}</p>
             </div>
           )}
         </div>
       </div>
       <p className="text-xs text-muted-foreground border-t border-border pt-4">
-        El almacenamiento térmico debe validarse con perfil horario de carga, recibos eléctricos, horarios tarifarios, operación real de chillers, espacio disponible, hidráulica y costo de implementación. Este resultado solo sirve como pre-diagnóstico comercial.
+        {t.disclaimer}
       </p>
     </div>
   );
@@ -649,6 +950,12 @@ function CalcAlmacenamiento() {
    CALCULADORA 3 — Optimización Planta Agua Helada
    ═══════════════════════════════════════════════════ */
 function CalcPlanta() {
+  const lang = useLang();
+  const c = T[lang].common;
+  const t = T[lang].calc3;
+  const fmt = makeFmt(lang);
+  const fmtNum = makeFmtNum(lang);
+
   const [operatingTons, setOperatingTons] = useState("");
   const [hoursYear, setHoursYear] = useState("4000");
   const [kwPerTon, setKwPerTon] = useState("");
@@ -694,86 +1001,86 @@ function CalcPlanta() {
         <div className="lg:col-span-3 space-y-6">
           <div className="bg-card border border-border p-6 rounded-sm shadow-sm space-y-6">
             <h3 className="font-heading font-bold text-xl text-primary flex items-center gap-2">
-              <Thermometer className="w-5 h-5 text-accent" /> Datos de tu planta de agua helada
+              <Thermometer className="w-5 h-5 text-accent" /> {t.formTitle}
             </h3>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Capacidad promedio de enfriamiento en operación (TR)</Label>
-              <Input type="text" placeholder="Ej. 600" value={operatingTons} onChange={e => setOperatingTons(e.target.value)} className="bg-background" />
-              <p className="text-xs text-muted-foreground">Toneladas promedio de operación, no la capacidad instalada.</p>
+              <Label className="text-sm font-medium">{t.operatingTons}</Label>
+              <Input type="text" placeholder="600" value={operatingTons} onChange={e => setOperatingTons(e.target.value)} className="bg-background" />
+              <p className="text-xs text-muted-foreground">{t.operatingTonsHelp}</p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Horas de operación al año</Label>
-              <Input type="number" placeholder="Ej. 4000" value={hoursYear} onChange={e => setHoursYear(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{t.hoursYear}</Label>
+              <Input type="number" placeholder="4000" value={hoursYear} onChange={e => setHoursYear(e.target.value)} className="bg-background" />
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Consumo actual estimado del sistema (kW por tonelada)</Label>
-              <Input type="text" placeholder="Ej. 1.10" value={kwPerTon} onChange={e => setKwPerTon(e.target.value)} className="bg-background" />
-              <p className="text-xs text-muted-foreground">Si no conoces este dato, usa 1.10 como referencia.</p>
+              <Label className="text-sm font-medium">{t.kwPerTon}</Label>
+              <Input type="text" placeholder="1.10" value={kwPerTon} onChange={e => setKwPerTon(e.target.value)} className="bg-background" />
+              <p className="text-xs text-muted-foreground">{t.kwPerTonHelp}</p>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Costo promedio de energía (MXN/kWh)</Label>
-              <Input type="text" placeholder="Ej. 2.20" value={energyCost} onChange={e => setEnergyCost(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{t.energyCost}</Label>
+              <Input type="text" placeholder="2.20" value={energyCost} onChange={e => setEnergyCost(e.target.value)} className="bg-background" />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">ΔT actual del agua helada (°F)</Label>
-                <Input type="text" placeholder="Ej. 6" value={currentDT} onChange={e => setCurrentDT(e.target.value)} className="bg-background" />
+                <Label className="text-sm font-medium">{t.currentDT}</Label>
+                <Input type="text" placeholder="6" value={currentDT} onChange={e => setCurrentDT(e.target.value)} className="bg-background" />
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">ΔT de diseño (°F)</Label>
-                <Input type="text" placeholder="Ej. 10" value={designDT} onChange={e => setDesignDT(e.target.value)} className="bg-background" />
+                <Label className="text-sm font-medium">{t.designDT}</Label>
+                <Input type="text" placeholder="10" value={designDT} onChange={e => setDesignDT(e.target.value)} className="bg-background" />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-sm font-medium">¿Las bombas tienen variador?</Label>
+                <Label className="text-sm font-medium">{t.pumpsVFD}</Label>
                 <Select value={hasVFD} onValueChange={setHasVFD}>
-                  <SelectTrigger className="bg-background"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                  <SelectTrigger className="bg-background"><SelectValue placeholder={c.selectPlaceholder} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="no">No</SelectItem>
-                    <SelectItem value="parcial">Parcial</SelectItem>
-                    <SelectItem value="si">Sí</SelectItem>
+                    <SelectItem value="no">{t.vfdOptions.no}</SelectItem>
+                    <SelectItem value="parcial">{t.vfdOptions.parcial}</SelectItem>
+                    <SelectItem value="si">{t.vfdOptions.si}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-sm font-medium">¿Hay medición o tendencias?</Label>
+                <Label className="text-sm font-medium">{t.trends}</Label>
                 <Select value={hasTrends} onValueChange={setHasTrends}>
-                  <SelectTrigger className="bg-background"><SelectValue placeholder="Selecciona" /></SelectTrigger>
+                  <SelectTrigger className="bg-background"><SelectValue placeholder={c.selectPlaceholder} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="no">No</SelectItem>
-                    <SelectItem value="parcial">Parcial</SelectItem>
-                    <SelectItem value="si">Sí, completo</SelectItem>
+                    <SelectItem value="no">{t.trendsOptions.no}</SelectItem>
+                    <SelectItem value="parcial">{t.trendsOptions.parcial}</SelectItem>
+                    <SelectItem value="si">{t.trendsOptions.si}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Condición principal observada</Label>
+              <Label className="text-sm font-medium">{t.mainCondition}</Label>
               <Select value={mainCondition} onValueChange={setMainCondition}>
-                <SelectTrigger className="bg-background"><SelectValue placeholder="Selecciona la condición" /></SelectTrigger>
+                <SelectTrigger className="bg-background"><SelectValue placeholder={t.conditionPlaceholder} /></SelectTrigger>
                 <SelectContent>
                   {PLANT_CONDITIONS.map(c => (
-                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                    <SelectItem key={c.value} value={c.value}>{c.label[lang]}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium">Inversión estimada para implementación (MXN, opcional)</Label>
-              <Input type="text" placeholder="Ej. 1,800,000" value={investment} onChange={e => setInvestment(e.target.value)} className="bg-background" />
+              <Label className="text-sm font-medium">{c.investment}</Label>
+              <Input type="text" placeholder="1,800,000" value={investment} onChange={e => setInvestment(e.target.value)} className="bg-background" />
             </div>
 
             <Button onClick={calculate} disabled={!canCalculate} className="w-full bg-accent text-accent-foreground font-bold uppercase tracking-wide hover:bg-accent/90 h-12 text-base">
-              <TrendingDown className="w-5 h-5 mr-2" /> Calcular ahorro estimado
+              <TrendingDown className="w-5 h-5 mr-2" /> {c.calculate}
             </Button>
           </div>
         </div>
@@ -782,44 +1089,44 @@ function CalcPlanta() {
           {showResults ? (
             <>
               <div className="bg-secondary border border-border p-6 rounded-sm shadow-sm space-y-4">
-                <h3 className="font-heading font-bold text-lg text-primary">Estimación preliminar</h3>
+                <h3 className="font-heading font-bold text-lg text-primary">{c.preliminary}</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Consumo anual estimado</span>
+                    <span className="text-sm text-muted-foreground">{t.annualConsumption}</span>
                     <span className="font-bold">{fmtNum(annualConsumption)} kWh</span>
                   </div>
                   <div className="flex justify-between items-center py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Costo anual de operación</span>
+                    <span className="text-sm text-muted-foreground">{t.annualCost}</span>
                     <span className="font-bold">{fmt(annualCost)}</span>
                   </div>
                   {condition && (
                     <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-sm text-muted-foreground">Factor de ahorro estimado</span>
+                      <span className="text-sm text-muted-foreground">{c.savingsFactor}</span>
                       <span className="font-bold">{(condition.low * 100).toFixed(0)}% — {(condition.high * 100).toFixed(0)}%</span>
                     </div>
                   )}
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro mensual estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">{c.monthlySavings}</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(monthlyLow)} — {fmt(monthlyHigh)}</p>
                   </div>
                   <div className="bg-accent/10 border border-accent/30 p-4 rounded-sm">
-                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">Ahorro anual estimado</p>
+                    <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wide font-medium">{c.annualSavings}</p>
                     <p className="text-2xl font-heading font-bold text-accent">{fmt(savingsLow)} — {fmt(savingsHigh)}</p>
                   </div>
                   {inv > 0 && (
                     <div className="flex justify-between items-center py-2 border-b border-border/50">
-                      <span className="text-sm text-muted-foreground">Retorno simple estimado</span>
-                      <span className="font-bold">{roiLow.toFixed(0)} a {roiHigh.toFixed(0)} meses</span>
+                      <span className="text-sm text-muted-foreground">{c.simplePayback}</span>
+                      <span className="font-bold">{roiLow.toFixed(0)} {c.to} {roiHigh.toFixed(0)} {c.months}</span>
                     </div>
                   )}
                 </div>
                 {lowDT && (
                   <div className="bg-destructive/10 border border-destructive/30 p-4 rounded-sm">
-                    <p className="text-sm font-medium text-destructive">⚠ Posible baja diferencia de temperatura: el sistema mueve más agua de la necesaria.</p>
+                    <p className="text-sm font-medium text-destructive">{t.lowDTWarning}</p>
                   </div>
                 )}
                 <div className="bg-primary/5 p-4 rounded-sm border border-primary/10">
-                  <p className="text-sm text-muted-foreground">Recomendación: realizar retro-commissioning y validación de setpoints, tendencias y alarmas.</p>
+                  <p className="text-sm text-muted-foreground">{t.recommendation}</p>
                 </div>
               </div>
               {!leadCaptured ? (
@@ -834,7 +1141,7 @@ function CalcPlanta() {
                       `ΔT actual: ${currentDT || "N/D"} °F / ΔT diseño: ${designDT} °F`,
                       `Bombas con variador: ${yesNo(hasVFD)}`,
                       `Medición/tendencias: ${yesNo(hasTrends)}`,
-                      `Condición principal: ${condition?.label ?? "N/D"}`,
+                      `Condición principal: ${condition?.label.es ?? "N/D"}`,
                       `Consumo anual estimado: ${fmtNum(annualConsumption)} kWh`,
                       `Costo anual de operación: ${fmt(annualCost)}`,
                       `Alerta baja ΔT: ${lowDT ? "Sí" : "No"}`,
@@ -849,21 +1156,21 @@ function CalcPlanta() {
               ) : (
                 <div className="bg-accent/10 border border-accent/30 p-6 rounded-sm text-center">
                   <CheckCircle className="w-10 h-10 text-accent mx-auto mb-3" />
-                  <h4 className="font-heading font-bold text-lg mb-2">¡Datos recibidos!</h4>
-                  <p className="text-sm text-muted-foreground">Un ingeniero te contactará para agendar tu revisión de planta.</p>
+                  <h4 className="font-heading font-bold text-lg mb-2">{c.received}</h4>
+                  <p className="text-sm text-muted-foreground">{t.receivedBody}</p>
                 </div>
               )}
             </>
           ) : (
             <div className="bg-secondary/50 border border-border p-8 rounded-sm text-center space-y-4">
               <Thermometer className="w-12 h-12 text-muted-foreground/30 mx-auto" />
-              <p className="text-muted-foreground">Completa los datos de tu planta para estimar el potencial de optimización.</p>
+              <p className="text-muted-foreground">{t.emptyState}</p>
             </div>
           )}
         </div>
       </div>
       <p className="text-xs text-muted-foreground border-t border-border pt-4">
-        Este cálculo no sustituye un estudio de ingeniería. Para confirmar ahorros se requiere revisar tendencias, temperaturas de suministro y retorno, flujo, operación de bombas, secuencia de chillers, recibos eléctricos y condiciones reales de carga.
+        {t.disclaimer}
       </p>
     </div>
   );
@@ -873,13 +1180,13 @@ function CalcPlanta() {
    PÁGINA PRINCIPAL DE CALCULADORAS
    ═══════════════════════════════════════════════════ */
 export default function Calculadora() {
+  const lang = useLang();
+  const href = useHref();
+  const t = T[lang];
+
   return (
     <Layout>
-      <Helmet>
-        <title>Calculadora de Ahorro Energético HVAC | Avantrik México</title>
-        <meta name="description" content="Calcula cuánto puedes ahorrar en energía eléctrica con automatización de aire acondicionado, almacenamiento térmico y optimización de planta de agua helada." />
-        <link rel="canonical" href="https://www.avantrik.com/calculadora-ahorro" />
-      </Helmet>
+      <Seo page="calculator" title={t.metaTitle} description={t.metaDescription} />
 
       {/* Hero */}
       <section className="relative bg-ink-gradient text-primary-foreground py-20 overflow-hidden">
@@ -888,13 +1195,13 @@ export default function Calculadora() {
           <div className="max-w-3xl">
             <div className="flex items-center gap-2 mb-4">
               <Zap className="w-5 h-5 text-accent" />
-              <span className="text-accent font-bold tracking-widest uppercase text-sm">Herramienta gratuita</span>
+              <span className="text-accent font-bold tracking-widest uppercase text-sm">{t.heroBadge}</span>
             </div>
             <h1 className="text-3xl md:text-5xl font-heading font-bold mb-4">
-              Calculadora de Ahorro Energético HVAC
+              {t.heroTitle}
             </h1>
             <p className="text-lg text-primary-foreground/70 max-w-2xl">
-              Estima cuánto puede ahorrar tu empresa en energía eléctrica. Selecciona una calculadora, ingresa los datos de tu instalación y obtén un estimado preliminar en menos de 2 minutos.
+              {t.heroSubtitle}
             </p>
           </div>
         </div>
@@ -905,36 +1212,36 @@ export default function Calculadora() {
         <Tabs defaultValue="automatizacion" className="space-y-8">
           <TabsList className="grid w-full grid-cols-1 md:grid-cols-3 h-auto gap-2 bg-secondary/50 p-2 rounded-sm">
             <TabsTrigger value="automatizacion" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground font-bold uppercase tracking-wide text-xs py-3 rounded-sm">
-              <Zap className="w-4 h-4 mr-2" /> Automatización A/C
+              <Zap className="w-4 h-4 mr-2" /> {t.tabs.automation}
             </TabsTrigger>
             <TabsTrigger value="almacenamiento" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground font-bold uppercase tracking-wide text-xs py-3 rounded-sm">
-              <Snowflake className="w-4 h-4 mr-2" /> Almacenamiento Térmico
+              <Snowflake className="w-4 h-4 mr-2" /> {t.tabs.storage}
             </TabsTrigger>
             <TabsTrigger value="planta" className="data-[state=active]:bg-accent data-[state=active]:text-accent-foreground font-bold uppercase tracking-wide text-xs py-3 rounded-sm">
-              <Thermometer className="w-4 h-4 mr-2" /> Planta de Agua Helada
+              <Thermometer className="w-4 h-4 mr-2" /> {t.tabs.plant}
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="automatizacion">
             <div className="mb-6">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Ahorro por Automatización del Aire Acondicionado</h2>
-              <p className="text-muted-foreground">Estima ahorros por horarios inteligentes, control automático, arranques escalonados, variadores de velocidad y mejores ajustes de operación.</p>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">{t.sections.automation.title}</h2>
+              <p className="text-muted-foreground">{t.sections.automation.body}</p>
             </div>
             <CalcAutomatizacion />
           </TabsContent>
 
           <TabsContent value="almacenamiento">
             <div className="mb-6">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Reducción de Demanda con Almacenamiento Térmico</h2>
-              <p className="text-muted-foreground">Estima cuánto enfriamiento podrías mover a otro horario y cuánto podrías reducir tu demanda eléctrica pico.</p>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">{t.sections.storage.title}</h2>
+              <p className="text-muted-foreground">{t.sections.storage.body}</p>
             </div>
             <CalcAlmacenamiento />
           </TabsContent>
 
           <TabsContent value="planta">
             <div className="mb-6">
-              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">Optimización de Planta de Agua Helada</h2>
-              <p className="text-muted-foreground">Estima el ahorro por mejorar operación de chillers, bombas, temperaturas, horarios y secuencias de control.</p>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-2">{t.sections.plant.title}</h2>
+              <p className="text-muted-foreground">{t.sections.plant.body}</p>
             </div>
             <CalcPlanta />
           </TabsContent>
@@ -944,13 +1251,13 @@ export default function Calculadora() {
       {/* CTA */}
       <section className="py-16 bg-secondary/50 border-t border-border">
         <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">¿Quieres un diagnóstico real?</h2>
+          <h2 className="text-2xl md:text-3xl font-heading font-bold mb-4">{t.cta.title}</h2>
           <p className="text-muted-foreground max-w-xl mx-auto mb-8">
-            Las calculadoras dan estimados preliminares. Para confirmar tus ahorros, nuestros ingenieros realizan mediciones en sitio, revisan recibos y analizan la operación real de tu sistema.
+            {t.cta.body}
           </p>
-          <a href="/contact">
+          <a href={href("contact")}>
             <Button size="lg" className="bg-accent text-accent-foreground font-bold uppercase tracking-wide h-14 px-8 hover:bg-accent/90">
-              Solicitar diagnóstico HVAC <ArrowRight className="w-5 h-5 ml-2" />
+              {t.cta.button} <ArrowRight className="w-5 h-5 ml-2" />
             </Button>
           </a>
         </div>

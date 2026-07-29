@@ -20,9 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import emailjs from "@emailjs/browser";
+import { useLang } from "@/lib/i18n";
 
 // ── EmailJS config ──────────────────────────────────────────
 const EMAILJS_SERVICE_ID = "service_wjgwyix";
@@ -30,22 +31,103 @@ const EMAILJS_TEMPLATE_ID = "template_mwz95cv";
 const EMAILJS_PUBLIC_KEY = "UL19pglSyFo2jCc8s";
 // ────────────────────────────────────────────────────────────
 
-const formSchema = z.object({
-  name: z.string().min(2, "El nombre es obligatorio"),
-  company: z.string().min(2, "El nombre de la empresa es obligatorio"),
-  email: z.string().email("Correo electrónico inválido"),
-  phone: z.string().min(10, "Se requiere un número de teléfono válido"),
-  service: z.string().min(1, "Por favor seleccione un servicio"),
-  message: z
-    .string()
-    .min(10, "Por favor proporcione más detalles sobre su proyecto"),
-});
+/**
+ * Los VALORES del selector se quedan en español a propósito: son los que
+ * viajan en el correo al equipo, que siempre lo lee en español. Solo cambia
+ * la etiqueta que ve el visitante.
+ */
+const SERVICES: { value: string; es: string; en: string }[] = [
+  { value: "Auditoría Energética", es: "Auditoría Energética", en: "Energy Audit" },
+  { value: "HVAC Industrial", es: "HVAC Industrial", en: "Industrial HVAC" },
+  { value: "Ingeniería Eléctrica", es: "Ingeniería Eléctrica", en: "Electrical Engineering" },
+  { value: "Sistemas Geotérmicos", es: "Sistemas Geotérmicos", en: "Geothermal Systems" },
+  { value: "Calculadora de Ahorro HVAC", es: "Calculadora de Ahorro HVAC", en: "HVAC Savings Calculator" },
+  { value: "Consultoría General", es: "Consultoría General", en: "General Consulting" },
+];
+
+const T = {
+  es: {
+    name: "Nombre Completo",
+    namePlaceholder: "Juan Pérez",
+    company: "Nombre de la Empresa",
+    companyPlaceholder: "Industrias S.A. de C.V.",
+    email: "Correo de Trabajo",
+    emailPlaceholder: "juan@empresa.com",
+    phone: "Número de Teléfono",
+    phonePlaceholder: "+52 (442) 000-0000",
+    service: "Servicio de Interés",
+    servicePlaceholder: "Seleccione un servicio",
+    message: "Detalles del Proyecto",
+    messagePlaceholder: "Describa los requisitos de su proyecto o retos específicos...",
+    sending: "Enviando...",
+    submit: "Enviar Solicitud",
+    successTitle: "¡Solicitud enviada!",
+    successBody: "Gracias por contactar a Avantrik. Te responderemos en menos de 24 horas.",
+    errorTitle: "Error al enviar",
+    errorBody:
+      "Hubo un problema al enviar tu mensaje. Por favor intenta de nuevo o escríbenos directamente a info@avantrik.com",
+    errors: {
+      name: "El nombre es obligatorio",
+      company: "El nombre de la empresa es obligatorio",
+      email: "Correo electrónico inválido",
+      phone: "Se requiere un número de teléfono válido",
+      service: "Por favor seleccione un servicio",
+      message: "Por favor proporcione más detalles sobre su proyecto",
+    },
+  },
+  en: {
+    name: "Full Name",
+    namePlaceholder: "John Smith",
+    company: "Company Name",
+    companyPlaceholder: "Acme Manufacturing",
+    email: "Work Email",
+    emailPlaceholder: "john@company.com",
+    phone: "Phone Number",
+    phonePlaceholder: "+52 (442) 000-0000",
+    service: "Service of Interest",
+    servicePlaceholder: "Select a service",
+    message: "Project Details",
+    messagePlaceholder: "Describe your project requirements or specific challenges...",
+    sending: "Sending...",
+    submit: "Send Request",
+    successTitle: "Request sent!",
+    successBody: "Thanks for contacting Avantrik. We'll get back to you within 24 hours.",
+    errorTitle: "Could not send",
+    errorBody:
+      "There was a problem sending your message. Please try again or email us directly at info@avantrik.com",
+    errors: {
+      name: "Name is required",
+      company: "Company name is required",
+      email: "Invalid email address",
+      phone: "A valid phone number is required",
+      service: "Please select a service",
+      message: "Please provide more details about your project",
+    },
+  },
+};
+
+function makeSchema(e: (typeof T)["es"]["errors"]) {
+  return z.object({
+    name: z.string().min(2, e.name),
+    company: z.string().min(2, e.company),
+    email: z.string().email(e.email),
+    phone: z.string().min(10, e.phone),
+    service: z.string().min(1, e.service),
+    message: z.string().min(10, e.message),
+  });
+}
+
+type FormValues = z.infer<ReturnType<typeof makeSchema>>;
 
 export function ContactForm() {
   const { toast } = useToast();
   const [sending, setSending] = useState(false);
+  const lang = useLang();
+  const t = T[lang];
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const formSchema = useMemo(() => makeSchema(t.errors), [t]);
+
+  const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -57,7 +139,7 @@ export function ContactForm() {
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: FormValues) {
     setSending(true);
     try {
       await emailjs.send(
@@ -76,17 +158,15 @@ export function ContactForm() {
       );
 
       toast({
-        title: "¡Solicitud enviada!",
-        description:
-          "Gracias por contactar a Avantrik. Te responderemos en menos de 24 horas.",
+        title: t.successTitle,
+        description: t.successBody,
       });
       form.reset();
     } catch (error) {
       console.error("EmailJS error:", error);
       toast({
-        title: "Error al enviar",
-        description:
-          "Hubo un problema al enviar tu mensaje. Por favor intenta de nuevo o escríbenos directamente a info@avantrik.com",
+        title: t.errorTitle,
+        description: t.errorBody,
         variant: "destructive",
       });
     } finally {
@@ -104,11 +184,11 @@ export function ContactForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-foreground/80">
-                  Nombre Completo
+                  {t.name}
                 </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Juan Pérez"
+                    placeholder={t.namePlaceholder}
                     {...field}
                     className="bg-background border-input"
                   />
@@ -123,11 +203,11 @@ export function ContactForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-foreground/80">
-                  Nombre de la Empresa
+                  {t.company}
                 </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="Industrias S.A. de C.V."
+                    placeholder={t.companyPlaceholder}
                     {...field}
                     className="bg-background border-input"
                   />
@@ -145,11 +225,11 @@ export function ContactForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-foreground/80">
-                  Correo de Trabajo
+                  {t.email}
                 </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="juan@empresa.com"
+                    placeholder={t.emailPlaceholder}
                     {...field}
                     className="bg-background border-input"
                   />
@@ -164,11 +244,11 @@ export function ContactForm() {
             render={({ field }) => (
               <FormItem>
                 <FormLabel className="text-foreground/80">
-                  Número de Teléfono
+                  {t.phone}
                 </FormLabel>
                 <FormControl>
                   <Input
-                    placeholder="+52 (55) 0000-0000"
+                    placeholder={t.phonePlaceholder}
                     {...field}
                     className="bg-background border-input"
                   />
@@ -185,33 +265,20 @@ export function ContactForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-foreground/80">
-                Servicio de Interés
+                {t.service}
               </FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger className="bg-background border-input">
-                    <SelectValue placeholder="Seleccione un servicio" />
+                    <SelectValue placeholder={t.servicePlaceholder} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="Auditoría Energética">
-                    Auditoría Energética
-                  </SelectItem>
-                  <SelectItem value="HVAC Industrial">
-                    HVAC Industrial
-                  </SelectItem>
-                  <SelectItem value="Ingeniería Eléctrica">
-                    Ingeniería Eléctrica
-                  </SelectItem>
-                  <SelectItem value="Sistemas Geotérmicos">
-                    Sistemas Geotérmicos
-                  </SelectItem>
-                  <SelectItem value="Calculadora de Ahorro HVAC">
-                    Calculadora de Ahorro HVAC
-                  </SelectItem>
-                  <SelectItem value="Consultoría General">
-                    Consultoría General
-                  </SelectItem>
+                  {SERVICES.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s[lang]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -225,11 +292,11 @@ export function ContactForm() {
           render={({ field }) => (
             <FormItem>
               <FormLabel className="text-foreground/80">
-                Detalles del Proyecto
+                {t.message}
               </FormLabel>
               <FormControl>
                 <Textarea
-                  placeholder="Describa los requisitos de su proyecto o retos específicos..."
+                  placeholder={t.messagePlaceholder}
                   className="min-h-[120px] bg-background border-input resize-none"
                   {...field}
                 />
@@ -247,11 +314,11 @@ export function ContactForm() {
         >
           {sending ? (
             <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Enviando...
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" /> {t.sending}
             </>
           ) : (
             <>
-              <Send className="w-4 h-4 mr-2" /> Enviar Solicitud
+              <Send className="w-4 h-4 mr-2" /> {t.submit}
             </>
           )}
         </Button>
