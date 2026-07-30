@@ -1848,8 +1848,8 @@ function generatePDF(data){
     checkY(8);
     doc.setFillColor(213,232,240);doc.rect(ml,y,cw,6,'F');
     doc.setTextColor(12,68,124);doc.setFontSize(7);doc.setFont('helvetica','bold');
-    doc.text('Punto',x[0]+2,y+4);doc.text('H',x[1]+2,y+4);doc.text('V',x[2]+2,y+4);doc.text('A',x[3]+2,y+4);
-    doc.text('Temp',x[4]+2,y+4);doc.text('Estado',x[5]+2,y+4);doc.text('Dirección',x[6]+2,y+4);
+    doc.text('Punto',x[0]+2,y+4);doc.text('H (mm/s)',x[1]+2,y+4);doc.text('V (mm/s)',x[2]+2,y+4);doc.text('A (mm/s)',x[3]+2,y+4);
+    doc.text('Temp (°C)',x[4]+2,y+4);doc.text('Estado',x[5]+2,y+4);doc.text('Dirección',x[6]+2,y+4);
     y+=6;
 
     AMCA204_PUNTOS.forEach(p=>{
@@ -2689,8 +2689,8 @@ function generatePDF(data){
     checkY(8);
     doc.setFillColor(213,232,240);doc.rect(ml,y,cw,6,'F');
     doc.setTextColor(12,68,124);doc.setFontSize(7);doc.setFont('helvetica','bold');
-    doc.text('Punto',x[0]+2,y+4);doc.text('H',x[1]+2,y+4);doc.text('V',x[2]+2,y+4);doc.text('A',x[3]+2,y+4);
-    doc.text('Temp',x[4]+2,y+4);doc.text('Estado',x[5]+2,y+4);doc.text('Dirección',x[6]+2,y+4);
+    doc.text('Punto',x[0]+2,y+4);doc.text('H (mm/s)',x[1]+2,y+4);doc.text('V (mm/s)',x[2]+2,y+4);doc.text('A (mm/s)',x[3]+2,y+4);
+    doc.text('Temp (°C)',x[4]+2,y+4);doc.text('Estado',x[5]+2,y+4);doc.text('Dirección',x[6]+2,y+4);
     y+=6;
 
     AMCA204_PUNTOS.forEach(p=>{
