@@ -11,17 +11,24 @@
 import type { Lang } from "@/lib/i18n";
 
 /**
- * ⚠️ PENDIENTE DE CONFIRMAR CON PRODUCCIÓN ANTES DE PUBLICAR.
+ * Rango de calibres: 26 a 18.
  *
- * Estos valores son el rango habitual de proveedores mexicanos comparables,
- * NO una capacidad verificada de Avantrik. Ajústalos en cuanto se conozcan los
- * calibres, tramos y medidas reales que se podrán ofrecer.
+ * El techo lo pone la engargoladora (LC12DR, 0.5–1.2 mm), que forma el
+ * engargolado Pittsburgh hasta calibre 18. El calibre 16 (1.52 mm) queda
+ * fuera de la máquina, así que no se publica: se cotiza aparte.
+ *
+ * El piso son las tablas de SMACNA, que no bajan de calibre 26 en ducto
+ * comercial. Ojo: la lámina calibre 26 mexicana ronda 0.46 mm (Ternium
+ * Zintro), por debajo del mínimo de 0.5 mm de la máquina — hay que probarlo
+ * con material real antes de prometer el 26.
+ *
+ * El tramo de 1.22 m es el ancho de hoja estándar (4 pies), no una elección.
  */
 export const DUCT_SPECS = {
   material: { es: "Lámina galvanizada", en: "Galvanized sheet steel" },
-  gauges: "16 – 26",
+  gauges: "26 a 18",
   length: { es: "Tramos de 1.22 m", en: "1.22 m sections" },
-  minSize: '3" × 3"',
+  sizes: { es: "A la medida del proyecto", en: "To project dimensions" },
   seam: "Pittsburgh",
   joints: { es: "TDF o grapa-zeta", en: "TDF or Z-bar and drive cleat" },
 };

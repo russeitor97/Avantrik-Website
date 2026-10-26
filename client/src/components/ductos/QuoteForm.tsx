@@ -61,7 +61,12 @@ const T = {
     quantityPlaceholder: "25 tramos",
     gauge: "Calibre",
     gaugePlaceholder: "Cal. 22",
-    optional: "Opcional — si aún no lo sabe, déjelo en blanco.",
+    pressure: "Presión",
+    pressurePlaceholder: "Clase",
+    pressureUnknown: "No la sé",
+    pressureUnit: "c.a.",
+    optional:
+      "Opcional — si aún no lo sabe, déjelo en blanco. Con la sección y la clase de presión le proponemos el calibre.",
     message: "Descripción del proyecto",
     messagePlaceholder:
       "Cuéntenos del proyecto: tipo de instalación, ubicación, fechas estimadas o cualquier detalle que ayude a cotizar.",
@@ -89,6 +94,7 @@ const T = {
       dimensions: "Dimensiones",
       quantity: "Cantidad",
       gauge: "Calibre",
+      pressure: "Clase de presión",
       notSpecified: "No especificado",
       project: "Proyecto",
     },
@@ -111,7 +117,12 @@ const T = {
     quantityPlaceholder: "25 sections",
     gauge: "Gauge",
     gaugePlaceholder: "22 ga",
-    optional: "Optional — leave blank if you don't know yet.",
+    pressure: "Pressure",
+    pressurePlaceholder: "Class",
+    pressureUnknown: "Don't know",
+    pressureUnit: "w.g.",
+    optional:
+      "Optional — leave blank if you don't know yet. Give us the section and pressure class and we'll propose the gauge.",
     message: "Project description",
     messagePlaceholder:
       "Tell us about the project: type of installation, location, estimated dates or any detail that helps us quote.",
@@ -139,6 +150,7 @@ const T = {
       dimensions: "Dimensions",
       quantity: "Quantity",
       gauge: "Gauge",
+      pressure: "Pressure class",
       notSpecified: "Not specified",
       project: "Project",
     },
@@ -146,6 +158,11 @@ const T = {
 };
 
 const OTHER = "__other__";
+const UNKNOWN = "__unknown__";
+
+/** Clases de presión de SMACNA. Son las que determinan el calibre junto con
+ *  la sección, así que conocerlas de entrada evita un ida y vuelta. */
+const PRESSURE_CLASSES = ['1/2"', '1"', '2"', '3"', '4"', '6"', '10"'];
 
 function makeSchema(e: (typeof T)["es"]["errors"]) {
   return z.object({
@@ -157,6 +174,7 @@ function makeSchema(e: (typeof T)["es"]["errors"]) {
     dimensions: z.string(),
     quantity: z.string(),
     gauge: z.string(),
+    pressure: z.string(),
     message: z.string().min(10, e.message),
   });
 }
@@ -188,6 +206,7 @@ export function QuoteForm({ preselected }: Props) {
       dimensions: "",
       quantity: "",
       gauge: "",
+      pressure: "",
       message: "",
     },
   });
@@ -203,12 +222,17 @@ export function QuoteForm({ preselected }: Props) {
     const l = t.labels;
     const none = l.notSpecified;
     const piece = values.piece === OTHER ? t.pieceOther : values.piece;
+    const pressure =
+      !values.pressure || values.pressure === UNKNOWN
+        ? none
+        : `${values.pressure} c.a.`;
 
     const message = [
       `${l.piece}: ${piece}`,
       `${l.dimensions}: ${values.dimensions || none}`,
       `${l.quantity}: ${values.quantity || none}`,
       `${l.gauge}: ${values.gauge || none}`,
+      `${l.pressure}: ${pressure}`,
       "",
       `${l.project}:`,
       values.message,
@@ -347,7 +371,7 @@ export function QuoteForm({ preselected }: Props) {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
           <FormField
             control={form.control}
             name="dimensions"
@@ -395,6 +419,31 @@ export function QuoteForm({ preselected }: Props) {
                     className="bg-background border-input font-mono text-sm"
                   />
                 </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="pressure"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-foreground/80">{t.pressure}</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="bg-background border-input font-mono text-sm">
+                      <SelectValue placeholder={t.pressurePlaceholder} />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {PRESSURE_CLASSES.map((p) => (
+                      <SelectItem key={p} value={p} className="font-mono">
+                        {p} {t.pressureUnit}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={UNKNOWN}>{t.pressureUnknown}</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}

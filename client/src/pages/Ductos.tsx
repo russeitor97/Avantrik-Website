@@ -13,7 +13,6 @@ import { DUCT_SPECS, FAMILIES, PRODUCTS, type FamilyId } from "@/lib/ductos";
  *  tabla de selección: qué calibre toca en cada ducto depende de su sección,
  *  la presión del sistema y el refuerzo. */
 const GAUGES = [
-  { gauge: "16", mm: "1.52" },
   { gauge: "18", mm: "1.21" },
   { gauge: "20", mm: "0.91" },
   { gauge: "22", mm: "0.76" },
@@ -69,10 +68,10 @@ const T = {
       { k: "Cierre longitudinal", v: DUCT_SPECS.seam },
       { k: "Unión transversal", v: DUCT_SPECS.joints.es },
       { k: "Longitud de tramo", v: DUCT_SPECS.length.es },
-      { k: "Medida mínima", v: DUCT_SPECS.minSize },
+      { k: "Medidas", v: DUCT_SPECS.sizes.es },
     ],
     specNote:
-      "Rangos sujetos a confirmación según la pieza y el proyecto. Las medidas finales se definen en la cotización.",
+      "El calibre no se elige por tamaño nominal: se define contra las tablas de SMACNA según la sección y la clase de presión del sistema. Calibre 16 y medidas especiales, bajo consulta.",
 
     gaugeEyebrow: "Criterio técnico",
     gaugeH2: "Cómo se define el calibre",
@@ -147,10 +146,10 @@ const T = {
       { k: "Longitudinal seam", v: DUCT_SPECS.seam },
       { k: "Transverse joint", v: DUCT_SPECS.joints.en },
       { k: "Section length", v: DUCT_SPECS.length.en },
-      { k: "Minimum size", v: DUCT_SPECS.minSize },
+      { k: "Sizes", v: DUCT_SPECS.sizes.en },
     ],
     specNote:
-      "Ranges subject to confirmation by part and project. Final dimensions are set in the quote.",
+      "Gauge is not chosen by nominal size: it is set against the SMACNA tables by section and the system's pressure class. Gauge 16 and special sizes on request.",
 
     gaugeEyebrow: "Engineering criteria",
     gaugeH2: "How gauge is determined",
