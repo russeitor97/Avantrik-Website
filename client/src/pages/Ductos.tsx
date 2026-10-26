@@ -13,6 +13,7 @@ import { DUCT_SPECS, FAMILIES, PRODUCTS, type FamilyId } from "@/lib/ductos";
  *  tabla de selección: qué calibre toca en cada ducto depende de su sección,
  *  la presión del sistema y el refuerzo. */
 const GAUGES = [
+  { gauge: "16", mm: "1.52" },
   { gauge: "18", mm: "1.21" },
   { gauge: "20", mm: "0.91" },
   { gauge: "22", mm: "0.76" },
@@ -71,7 +72,7 @@ const T = {
       { k: "Medidas", v: DUCT_SPECS.sizes.es },
     ],
     specNote:
-      "El calibre no se elige por tamaño nominal: se define contra las tablas de SMACNA según la sección y la clase de presión del sistema. Calibre 16 y medidas especiales, bajo consulta.",
+      "El calibre no se elige por tamaño nominal: se define contra las tablas de SMACNA según la sección y la clase de presión del sistema. Medidas especiales, bajo consulta.",
 
     gaugeEyebrow: "Criterio técnico",
     gaugeH2: "Cómo se define el calibre",
@@ -149,7 +150,7 @@ const T = {
       { k: "Sizes", v: DUCT_SPECS.sizes.en },
     ],
     specNote:
-      "Gauge is not chosen by nominal size: it is set against the SMACNA tables by section and the system's pressure class. Gauge 16 and special sizes on request.",
+      "Gauge is not chosen by nominal size: it is set against the SMACNA tables by section and the system's pressure class. Special sizes on request.",
 
     gaugeEyebrow: "Engineering criteria",
     gaugeH2: "How gauge is determined",

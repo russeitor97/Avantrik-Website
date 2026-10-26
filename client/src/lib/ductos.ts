@@ -11,22 +11,22 @@
 import type { Lang } from "@/lib/i18n";
 
 /**
- * Rango de calibres: 26 a 18.
+ * Rango de calibres: 16 a 26.
  *
- * El techo lo pone la engargoladora (LC12DR, 0.5–1.2 mm), que forma el
- * engargolado Pittsburgh hasta calibre 18. El calibre 16 (1.52 mm) queda
- * fuera de la máquina, así que no se publica: se cotiza aparte.
+ * Es el rango que cubren las tablas de ducto rectangular de SMACNA. El 26 es
+ * el mínimo en ducto comercial; el 16 aparece en secciones grandes o clases
+ * de presión altas. Lo confirman los dos referentes del mercado mexicano:
+ * DUMONT publica 18-26 y GG123 publica 16-26.
  *
- * El piso son las tablas de SMACNA, que no bajan de calibre 26 en ducto
- * comercial. Ojo: la lámina calibre 26 mexicana ronda 0.46 mm (Ternium
- * Zintro), por debajo del mínimo de 0.5 mm de la máquina — hay que probarlo
- * con material real antes de prometer el 26.
+ * El calibre no se elige por tamaño nominal: sale de cruzar la dimensión
+ * mayor del ducto con la clase de presión del sistema, y esa dimensión mayor
+ * manda sobre los cuatro lados.
  *
  * El tramo de 1.22 m es el ancho de hoja estándar (4 pies), no una elección.
  */
 export const DUCT_SPECS = {
   material: { es: "Lámina galvanizada", en: "Galvanized sheet steel" },
-  gauges: "26 a 18",
+  gauges: "16 a 26",
   length: { es: "Tramos de 1.22 m", en: "1.22 m sections" },
   sizes: { es: "A la medida del proyecto", en: "To project dimensions" },
   seam: "Pittsburgh",
