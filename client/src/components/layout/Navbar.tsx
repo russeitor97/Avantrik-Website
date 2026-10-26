@@ -10,15 +10,17 @@ import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
 const WHATSAPP_URL = "https://walink.co/e1h4ub";
 
 /**
- * Etiquetas deliberadamente cortas: son 8 enlaces más el botón de cotizar y
+ * Etiquetas deliberadamente cortas: son 9 enlaces más el botón de cotizar y
  * tres iconos, y con nombres largos la barra se desborda (o se parte en dos
- * líneas y el logo se encima con el primer enlace).
+ * líneas y el logo se encima con el primer enlace). A 1280px ya no sobra
+ * espacio: si se agrega otro enlace, hay que agrupar en un desplegable.
  */
 const NAV: { page: PageKey; es: string; en: string }[] = [
   { page: "home", es: "Inicio", en: "Home" },
   { page: "about", es: "Nosotros", en: "About" },
   { page: "audits", es: "Auditorías", en: "Audits" },
   { page: "hvac", es: "HVAC", en: "HVAC" },
+  { page: "ducts", es: "Ductos", en: "Ducts" },
   { page: "electrical", es: "Eléctrica", en: "Electrical" },
   { page: "geothermal", es: "Geotermia", en: "Geothermal" },
   { page: "calculator", es: "Calculadora", en: "Calculator" },
@@ -129,7 +131,7 @@ export function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden items-center gap-5 xl:flex">
+          <div className="hidden items-center gap-3.5 xl:flex 2xl:gap-5">
             {navLinks.map((link) => {
               const active = location === link.href;
               return (
