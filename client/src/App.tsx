@@ -22,6 +22,7 @@ const ElectricalEngineering = lazy(
 const GeothermalSystems = lazy(
   () => import("@/pages/Services/GeothermalSystems"),
 );
+const Ductos = lazy(() => import("@/pages/Ductos"));
 // Portal interno (noindex, fuera del sitemap)
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Portal = lazy(() => import("@/pages/Portal"));
@@ -60,6 +61,7 @@ function Router() {
         <Route path="/hvac-industrial" component={IndustrialHVAC} />
         <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
         <Route path="/geotermia" component={GeothermalSystems} />
+        <Route path="/ductos-lamina-galvanizada" component={Ductos} />
         <Route path="/aviso-de-privacidad" component={Privacy} />
 
         {/* Versión en inglés — mismos componentes, el idioma sale de la URL
@@ -73,6 +75,7 @@ function Router() {
         <Route path="/en/industrial-hvac" component={IndustrialHVAC} />
         <Route path="/en/electrical-engineering" component={ElectricalEngineering} />
         <Route path="/en/geothermal-systems" component={GeothermalSystems} />
+        <Route path="/en/sheet-metal-ducts" component={Ductos} />
         <Route path="/en/privacy-policy" component={Privacy} />
 
         {/* Portal interno (privado, noindex) */}

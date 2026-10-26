@@ -25,6 +25,7 @@ export const PAGES = {
   hvac: { es: "/hvac-industrial", en: "/en/industrial-hvac" },
   electrical: { es: "/ingenieria-electrica", en: "/en/electrical-engineering" },
   geothermal: { es: "/geotermia", en: "/en/geothermal-systems" },
+  ducts: { es: "/ductos-lamina-galvanizada", en: "/en/sheet-metal-ducts" },
   privacy: { es: "/aviso-de-privacidad", en: "/en/privacy-policy" },
 } as const;
 
