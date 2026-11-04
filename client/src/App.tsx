@@ -27,6 +27,7 @@ const Ductos = lazy(() => import("@/pages/Ductos"));
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Portal = lazy(() => import("@/pages/Portal"));
 const PortalCompras = lazy(() => import("@/pages/PortalCompras"));
+const PortalCotizaciones = lazy(() => import("@/pages/PortalCotizaciones"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 
 /** Loader mínimo de marca mientras se descarga el chunk de una página. */
@@ -81,6 +82,7 @@ function Router() {
         {/* Portal interno (privado, noindex) */}
         <Route path="/portal" component={Portal} />
         <Route path="/portal/compras" component={PortalCompras} />
+        <Route path="/portal/cotizaciones" component={PortalCotizaciones} />
 
         {/* 404 */}
         <Route component={NotFound} />
