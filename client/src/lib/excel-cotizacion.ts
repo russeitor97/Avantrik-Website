@@ -8,12 +8,13 @@
  *   "Equipos_hoja2"); las que no (la "Propuesta_comercial") se ignoran.
  * - Renglones de SUBTOTAL / TOTAL se saltan.
  * - Si una hoja no trae columna Sistema, el sistema es el nombre de la hoja.
- * - El proveedor y costo de cada renglón se vuelven su opción elegida.
+ * - El proveedor y costo de cada renglón entran como costo ESTIMADO (no es
+ *   una cotización formal; las formales se registran en la app).
  */
 import type ExcelJSType from "exceljs";
 import {
-  agrupar, analizar, costoTotal, costoUnitEnProyecto, nid, normalizar, ofertaValida,
-  type Moneda, type Oferta, type Partida, type Proyecto,
+  agrupar, analizar, nid, normalizar,
+  type Moneda, type Partida, type Proyecto,
 } from "./cotizaciones";
 
 type Col =
@@ -75,6 +76,8 @@ export async function importarExcel(file: Blob, moneda: Moneda): Promise<Resulta
   const hojas: ResultadoExcel["hojas"] = [];
 
   wb.eachSheet((ws) => {
+    // La hoja de cotizaciones que genera la propia app no es presupuesto.
+    if (/cotizaciones\s+proveedores/i.test(ws.name)) return;
     // 1) encabezado dentro de las primeras 20 filas
     let filaEnc = 0;
     let cols: Partial<Record<Col, number>> = {};
@@ -113,26 +116,21 @@ export async function importarExcel(file: Blob, moneda: Moneda): Promise<Resulta
         cantidad: numero(leer(row, "cantidad")),
         venta: numero(leer(row, "precio")),
         notas: texto(leer(row, "notas")).trim(),
-        ofertas: [],
-        elegida: "",
+        estimado: null,
+        adjudicada: "",
       };
       const provTxt = texto(leer(row, "proveedor"));
       const costo = numero(leer(row, "costo"));
       if (provTxt.trim() || costo > 0) {
         const { proveedor, notas } = separarProveedor(provTxt);
-        const o: Oferta = {
-          id: nid(),
+        pa.estimado = {
           proveedor,
           unidad: texto(leer(row, "unidadCompra")).trim() || pa.unidad,
           cantidad: cols.cantidadCompra ? numero(leer(row, "cantidadCompra")) : pa.cantidad,
           costo,
           moneda,
-          entrega: texto(leer(row, "entrega")).trim(),
-          notas,
-          archivoId: "",
+          notas: [notas, texto(leer(row, "entrega")).trim()].filter(Boolean).join(" · "),
         };
-        pa.ofertas.push(o);
-        pa.elegida = o.id;
       }
       partidas.push(pa);
       n++;
@@ -149,24 +147,24 @@ export async function exportarExcel(p: Proyecto): Promise<Blob> {
   const ExcelJS = (await import("exceljs")).default;
   const wb = new ExcelJS.Workbook();
   wb.creator = "Portal Avantrik";
-  const ws = wb.addWorksheet("Cotización", { views: [{ state: "frozen", ySplit: 4 }] });
+  const ws = wb.addWorksheet("Presupuesto", { views: [{ state: "frozen", ySplit: 4 }] });
 
   const fmt = p.moneda === "USD" ? '"US$"#,##0.00' : '"$"#,##0.00';
   ws.columns = [
     { width: 18 }, { width: 14 }, { width: 60 }, { width: 8 }, { width: 10 }, { width: 14 }, { width: 15 },
-    { width: 10 }, { width: 10 }, { width: 14 }, { width: 15 }, { width: 30 }, { width: 15 }, { width: 9 },
+    { width: 28 }, { width: 16 }, { width: 10 }, { width: 10 }, { width: 14 }, { width: 15 }, { width: 15 }, { width: 9 },
     { width: 16 }, { width: 30 },
   ];
   ws.mergeCells("A1:F1");
   ws.getCell("A1").value = `AVANTRIK | ${p.nombre}`;
   ws.getCell("A1").font = { bold: true, size: 14 };
-  ws.getCell("A2").value = [p.cliente && `Cliente: ${p.cliente}`, p.folio && `Cot. ${p.folio}`, "Precios sin IVA", p.tipoCambio ? `TC USD ${p.tipoCambio}` : ""]
+  ws.getCell("A2").value = [p.cliente && `Cliente: ${p.cliente}`, p.folio && `Cot. ${p.folio}`, "Montos sin IVA", p.tipoCambio ? `TC USD ${p.tipoCambio}` : ""]
     .filter(Boolean)
     .join(" · ");
 
   const enc = [
-    "Sistema", "Sección", "Concepto", "Unidad", "Cantidad", "Precio unitario", "Subtotal precio", "Unidad compra",
-    "Cantidad compra", "Costo unitario", "Subtotal costo", "Proveedor", "Utilidad", "Margen", "Entrega", "Notas",
+    "Sistema", "Sección", "Concepto", "Unidad", "Cantidad", "Precio unitario", "Subtotal precio", "Proveedor", "Estatus",
+    "Unidad compra", "Cantidad compra", "Costo unitario", "Subtotal costo", "Utilidad", "Margen", "Entrega", "Notas",
   ];
   const filaEnc = ws.getRow(4);
   filaEnc.values = enc;
@@ -177,79 +175,75 @@ export async function exportarExcel(p: Proyecto): Promise<Blob> {
   const subtotales: number[] = [];
   for (const g of agrupar(p.partidas)) {
     const inicio = r;
+    const tg = { v: 0, c: 0 };
     for (const pa of g.partidas) {
       const a = analizar(pa, p);
-      const o = a.oferta;
-      const cu = o ? costoUnitEnProyecto(o, p) : null;
-      const row = ws.getRow(r);
-      const venta = pa.venta * pa.cantidad;
-      const costo = o && cu !== null ? cu * o.cantidad : null;
-      row.values = [
+      const venta = a.venta;
+      tg.v += venta;
+      tg.c += a.costo || 0;
+      const estatus = a.opcion ? `Adjudicado ${a.opcion.cot.folio}` : a.estatus;
+      const notas = [pa.notas, a.fuente === "estimado" ? pa.estimado?.notas : ""].filter(Boolean).join(" · ");
+      ws.getRow(r).values = [
         pa.sistema, pa.seccion, pa.descripcion, pa.unidad, pa.cantidad, pa.venta,
         { formula: `E${r}*F${r}`, result: venta },
-        o?.unidad || "", o ? o.cantidad : null, cu,
-        costo === null ? null : { formula: `I${r}*J${r}`, result: costo },
-        o ? [o.proveedor, o.notas].filter(Boolean).join(" – ") : "",
-        costo === null ? null : { formula: `G${r}-K${r}`, result: venta - costo },
-        costo === null || !venta ? null : { formula: `IF(G${r}=0,"",M${r}/G${r})`, result: (venta - costo) / venta },
-        o?.entrega || "",
-        pa.notas,
+        a.proveedor, estatus, a.unidad, a.costo === null ? null : a.cantidad, a.costoUnit,
+        a.costo === null ? null : { formula: `K${r}*L${r}`, result: a.costo },
+        a.costo === null ? null : { formula: `G${r}-M${r}`, result: venta - a.costo },
+        a.costo === null || !venta ? null : { formula: `IF(G${r}=0,"",N${r}/G${r})`, result: (venta - a.costo) / venta },
+        a.opcion?.cot.entrega || "",
+        notas,
       ];
-      row.getCell(3).alignment = { wrapText: true, vertical: "top" };
+      ws.getRow(r).getCell(3).alignment = { wrapText: true, vertical: "top" };
       r++;
     }
     const tot = ws.getRow(r);
-    const tg = { v: 0, c: 0 };
-    g.partidas.forEach((pa) => {
-      const a = analizar(pa, p);
-      tg.v += a.venta;
-      tg.c += a.costo || 0;
-    });
     tot.values = [
       g.sistema, "", `SUBTOTAL ${g.sistema}`.trim(), "", "", "",
-      { formula: `SUM(G${inicio}:G${r - 1})`, result: tg.v }, "", "", "",
-      { formula: `SUM(K${inicio}:K${r - 1})`, result: tg.c }, "",
-      { formula: `SUM(M${inicio}:M${r - 1})`, result: tg.v - tg.c },
-      { formula: `IF(G${r}=0,"",M${r}/G${r})`, result: tg.v ? (tg.v - tg.c) / tg.v : 0 },
+      { formula: `SUM(G${inicio}:G${r - 1})`, result: tg.v }, "", "", "", "", "",
+      { formula: `SUM(M${inicio}:M${r - 1})`, result: tg.c },
+      { formula: `SUM(N${inicio}:N${r - 1})`, result: tg.v - tg.c },
+      { formula: `IF(G${r}=0,"",N${r}/G${r})`, result: tg.v ? (tg.v - tg.c) / tg.v : 0 },
     ];
     tot.font = { bold: true };
     tot.eachCell((c) => (c.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } }));
     subtotales.push(r);
     r += 2;
   }
+  const suma = (col: string) => subtotales.map((x) => `${col}${x}`).join(",");
   const total = ws.getRow(r);
-  const suma = (col: string) => subtotales.map((s) => `${col}${s}`).join(",");
   total.values = [
-    "TOTAL GENERAL", "", "", "", "", "", { formula: `SUM(${suma("G")})` }, "", "", "", { formula: `SUM(${suma("K")})` }, "",
-    { formula: `SUM(${suma("M")})` }, { formula: `IF(G${r}=0,"",M${r}/G${r})` },
+    "TOTAL GENERAL", "", "", "", "", "", { formula: `SUM(${suma("G")})` }, "", "", "", "", "",
+    { formula: `SUM(${suma("M")})` }, { formula: `SUM(${suma("N")})` }, { formula: `IF(G${r}=0,"",N${r}/G${r})` },
   ];
   total.font = { bold: true, size: 12 };
+  for (const col of ["F", "G", "L", "M", "N"]) ws.getColumn(col).numFmt = fmt;
+  ws.getColumn("O").numFmt = "0.0%";
 
-  for (const col of ["F", "G", "J", "K", "M"]) ws.getColumn(col).numFmt = fmt;
-  ws.getColumn("N").numFmt = "0.0%";
-
-  /* Hoja 2: todas las opciones de proveedor */
-  const ws2 = wb.addWorksheet("Opciones de proveedores", { views: [{ state: "frozen", ySplit: 1 }] });
+  /* Hoja 2: cotizaciones de proveedores (una fila por línea) */
+  const ws2 = wb.addWorksheet("Cotizaciones proveedores", { views: [{ state: "frozen", ySplit: 1 }] });
   ws2.columns = [
-    { header: "Sistema", width: 18 }, { header: "Concepto", width: 55 }, { header: "Elegida", width: 8 },
-    { header: "Proveedor", width: 28 }, { header: "Unidad compra", width: 10 }, { header: "Cantidad compra", width: 10 },
-    { header: "Costo unitario", width: 14 }, { header: "Moneda", width: 8 }, { header: `Subtotal (${p.moneda})`, width: 15 },
-    { header: "Margen", width: 9 }, { header: "Entrega", width: 16 }, { header: "Notas", width: 35 },
+    { header: "Folio", width: 9 }, { header: "Proveedor", width: 26 }, { header: "Folio proveedor", width: 14 },
+    { header: "Estatus", width: 11 }, { header: "Recibida", width: 11 }, { header: "Vigencia", width: 11 },
+    { header: "Entrega", width: 16 }, { header: "Moneda", width: 8 }, { header: "Concepto del presupuesto", width: 50 },
+    { header: "Descripción del proveedor", width: 40 }, { header: "Unidad", width: 8 }, { header: "Cantidad", width: 10 },
+    { header: "Precio unitario", width: 14 }, { header: "Importe", width: 14 }, { header: "Adjudicada", width: 10 },
+    { header: "Contacto", width: 22 }, { header: "Correo", width: 26 }, { header: "Condiciones", width: 26 },
   ];
   ws2.getRow(1).font = { bold: true };
-  for (const pa of p.partidas) {
-    const venta = pa.venta * pa.cantidad;
-    for (const o of pa.ofertas.filter(ofertaValida)) {
-      const c = costoTotal(o, p);
-      ws2.addRow([
-        pa.sistema, pa.descripcion, o.id === pa.elegida ? "✔" : "", o.proveedor, o.unidad, o.cantidad, o.costo, o.moneda,
-        c, c !== null && venta ? (venta - c) / venta : null, o.entrega, o.notas,
+  for (const c of p.cotizaciones) {
+    const lineas = c.lineas.length ? c.lineas : [null];
+    for (const l of lineas) {
+      const pa = l ? p.partidas.find((x) => x.id === l.partidaId) : undefined;
+      const fila = ws2.addRow([
+        c.folio, c.proveedor, c.folioProveedor, c.estatus, c.fechaRecepcion, c.vigencia, c.entrega, c.moneda,
+        pa?.descripcion || (l ? "(sin ligar)" : ""), l?.descripcion || "", l?.unidad || "", l?.cantidad ?? null, l?.precio ?? null,
+        null, l && pa?.adjudicada === l.id ? "★" : "", c.contacto, c.correo, c.condiciones,
       ]);
+      if (l) fila.getCell(14).value = { formula: `L${fila.number}*M${fila.number}`, result: l.cantidad * l.precio };
     }
   }
-  ws2.getColumn(7).numFmt = "#,##0.00";
-  ws2.getColumn(9).numFmt = fmt;
-  ws2.getColumn(10).numFmt = "0.0%";
+  ws2.getColumn(13).numFmt = "#,##0.00";
+  ws2.getColumn(14).numFmt = "#,##0.00";
 
   const buf = await wb.xlsx.writeBuffer();
   return new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });

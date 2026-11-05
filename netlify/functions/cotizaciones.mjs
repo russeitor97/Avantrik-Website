@@ -35,8 +35,68 @@ const moneda = (v) => (v === "USD" ? "USD" : "MXN");
 const nuevoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 const idOk = (v) => (ID.test(String(v || "")) ? String(v) : nuevoId());
 
+const fecha = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : "");
+const ref = (v) => (ID.test(String(v || "")) ? String(v) : "");
+const ESTATUS_COT = ["Solicitada", "Recibida", "Descartada"];
+
+/**
+ * Modelo (ver client/src/lib/cotizaciones.ts):
+ *  - partidas: el presupuesto (venta) + costo estimado opcional + línea adjudicada
+ *  - cotizaciones: documentos de proveedores con líneas ligadas a partidas
+ */
 function limpiarProyecto(b) {
-  const partidas = Array.isArray(b?.partidas) ? b.partidas.slice(0, 1500) : [];
+  const cotizaciones = (Array.isArray(b?.cotizaciones) ? b.cotizaciones.slice(0, 300) : []).map((c) => ({
+    id: idOk(c?.id),
+    folio: txt(c?.folio, 20),
+    proveedor: txt(c?.proveedor, 200),
+    contacto: txt(c?.contacto, 160),
+    correo: txt(c?.correo, 160),
+    telefono: txt(c?.telefono, 60),
+    folioProveedor: txt(c?.folioProveedor, 80),
+    fechaSolicitud: fecha(c?.fechaSolicitud),
+    fechaRecepcion: fecha(c?.fechaRecepcion),
+    vigencia: fecha(c?.vigencia),
+    entrega: txt(c?.entrega, 120),
+    condiciones: txt(c?.condiciones, 300),
+    moneda: moneda(c?.moneda),
+    estatus: ESTATUS_COT.includes(c?.estatus) ? c.estatus : "Recibida",
+    notas: txt(c?.notas, 2000),
+    archivoId: ref(c?.archivoId),
+    lineas: (Array.isArray(c?.lineas) ? c.lineas.slice(0, 300) : []).map((l) => ({
+      id: idOk(l?.id),
+      partidaId: ref(l?.partidaId),
+      descripcion: txt(l?.descripcion, 600),
+      unidad: txt(l?.unidad, 30),
+      cantidad: num(l?.cantidad),
+      precio: num(l?.precio),
+    })),
+    creadoPor: txt(c?.creadoPor, 160),
+    creado: num(c?.creado) || Date.now(),
+  }));
+  const lineasValidas = new Set(cotizaciones.flatMap((c) => c.lineas.map((l) => l.id)));
+
+  const partidas = (Array.isArray(b?.partidas) ? b.partidas.slice(0, 1500) : []).map((p) => ({
+    id: idOk(p?.id),
+    sistema: txt(p?.sistema, 120),
+    seccion: txt(p?.seccion, 120),
+    descripcion: txt(p?.descripcion, 800),
+    unidad: txt(p?.unidad, 30),
+    cantidad: num(p?.cantidad),
+    venta: num(p?.venta),
+    notas: txt(p?.notas, 1000),
+    estimado: p?.estimado
+      ? {
+          proveedor: txt(p.estimado.proveedor, 200),
+          unidad: txt(p.estimado.unidad, 30),
+          cantidad: num(p.estimado.cantidad),
+          costo: num(p.estimado.costo),
+          moneda: moneda(p.estimado.moneda),
+          notas: txt(p.estimado.notas, 600),
+        }
+      : null,
+    adjudicada: lineasValidas.has(String(p?.adjudicada || "")) ? String(p.adjudicada) : "",
+  }));
+
   return {
     nombre: txt(b?.nombre, 160),
     cliente: txt(b?.cliente, 160),
@@ -46,34 +106,8 @@ function limpiarProyecto(b) {
     margenObjetivo: num(b?.margenObjetivo ?? 20),
     estatus: b?.estatus === "Comprado" ? "Comprado" : "Cotizando",
     notas: txt(b?.notas, 4000),
-    partidas: partidas.map((p) => {
-      const ofertas = Array.isArray(p?.ofertas) ? p.ofertas.slice(0, 30) : [];
-      // Oferta = lado de COMPRA del renglón (puede ir en otra unidad/cantidad que la venta)
-      const limpias = ofertas.map((o) => ({
-        id: idOk(o?.id),
-        proveedor: txt(o?.proveedor, 200),
-        unidad: txt(o?.unidad, 30),
-        cantidad: num(o?.cantidad),
-        costo: num(o?.costo),
-        moneda: moneda(o?.moneda),
-        entrega: txt(o?.entrega, 120),
-        notas: txt(o?.notas, 600),
-        archivoId: ID.test(String(o?.archivoId || "")) ? String(o.archivoId) : "",
-      }));
-      const elegida = limpias.some((o) => o.id === p?.elegida) ? String(p.elegida) : "";
-      return {
-        id: idOk(p?.id),
-        sistema: txt(p?.sistema, 120),
-        seccion: txt(p?.seccion, 120),
-        descripcion: txt(p?.descripcion, 800),
-        unidad: txt(p?.unidad, 30),
-        cantidad: num(p?.cantidad),
-        venta: num(p?.venta),
-        notas: txt(p?.notas, 1000),
-        ofertas: limpias,
-        elegida,
-      };
-    }),
+    partidas,
+    cotizaciones,
   };
 }
 
