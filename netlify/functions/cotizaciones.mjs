@@ -36,7 +36,7 @@ const nuevoId = () => `${Date.now().toString(36)}${Math.random().toString(36).sl
 const idOk = (v) => (ID.test(String(v || "")) ? String(v) : nuevoId());
 
 function limpiarProyecto(b) {
-  const partidas = Array.isArray(b?.partidas) ? b.partidas.slice(0, 400) : [];
+  const partidas = Array.isArray(b?.partidas) ? b.partidas.slice(0, 1500) : [];
   return {
     nombre: txt(b?.nombre, 160),
     cliente: txt(b?.cliente, 160),
@@ -47,11 +47,14 @@ function limpiarProyecto(b) {
     estatus: b?.estatus === "Comprado" ? "Comprado" : "Cotizando",
     notas: txt(b?.notas, 4000),
     partidas: partidas.map((p) => {
-      const ofertas = Array.isArray(p?.ofertas) ? p.ofertas.slice(0, 40) : [];
+      const ofertas = Array.isArray(p?.ofertas) ? p.ofertas.slice(0, 30) : [];
+      // Oferta = lado de COMPRA del renglón (puede ir en otra unidad/cantidad que la venta)
       const limpias = ofertas.map((o) => ({
         id: idOk(o?.id),
-        proveedor: txt(o?.proveedor, 160),
-        precio: num(o?.precio),
+        proveedor: txt(o?.proveedor, 200),
+        unidad: txt(o?.unidad, 30),
+        cantidad: num(o?.cantidad),
+        costo: num(o?.costo),
         moneda: moneda(o?.moneda),
         entrega: txt(o?.entrega, 120),
         notas: txt(o?.notas, 600),
@@ -60,12 +63,12 @@ function limpiarProyecto(b) {
       const elegida = limpias.some((o) => o.id === p?.elegida) ? String(p.elegida) : "";
       return {
         id: idOk(p?.id),
-        descripcion: txt(p?.descripcion, 600),
-        modelo: txt(p?.modelo, 200),
-        cantidad: num(p?.cantidad),
+        sistema: txt(p?.sistema, 120),
+        seccion: txt(p?.seccion, 120),
+        descripcion: txt(p?.descripcion, 800),
         unidad: txt(p?.unidad, 30),
+        cantidad: num(p?.cantidad),
         venta: num(p?.venta),
-        costoEst: num(p?.costoEst),
         notas: txt(p?.notas, 1000),
         ofertas: limpias,
         elegida,
