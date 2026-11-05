@@ -207,8 +207,8 @@ export default function Portal() {
                         Cotizaciones
                       </h2>
                       <p className="mt-2 flex-grow text-sm leading-relaxed text-primary-foreground/60">
-                        Guarda las cotizaciones de materiales y equipos por proyecto y proveedor, con su
-                        PDF, y busca qué se cotizó, a quién y a qué precio.
+                        Sube nuestra cotización de un proyecto, agrega los precios de cada proveedor y
+                        compara contra el margen. Resumen listo para mandar al grupo.
                       </p>
                     </div>
                   </Link>

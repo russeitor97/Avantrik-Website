@@ -2,95 +2,126 @@ import { getStore } from "@netlify/blobs";
 import { emailDeSesion } from "../lib/portal-token.mjs";
 
 /**
- * API de Cotizaciones (portal interno). Todo requiere sesión del portal.
+ * API de Cotizaciones de proyecto (portal interno). Todo requiere sesión.
  *
- *  - GET    /api/cotizaciones               → listar todas (sin archivos)
- *  - POST   /api/cotizaciones               → crear (asigna folio COT-AAAA-NNN)
- *  - PUT    /api/cotizaciones/:id           → actualizar
- *  - DELETE /api/cotizaciones/:id           → eliminar (y su archivo)
- *  - GET    /api/cotizaciones/:id/adjunto   → descargar el PDF/imagen del proveedor
- *  - PUT    /api/cotizaciones/:id/adjunto   → subir/reemplazar (cuerpo binario)
- *  - DELETE /api/cotizaciones/:id/adjunto   → quitar archivo
+ * Un proyecto = nuestra cotización al cliente (partidas con precio de venta)
+ * + para cada partida, las ofertas de varios proveedores. El margen se
+ * calcula en el cliente.
  *
- * Datos en Netlify Blobs: store "cotizaciones" (claves "cot/<id>" y
- * "meta/folio-<año>") y store "cotizaciones-adjuntos" (clave = id).
+ *  - GET    /api/cotizaciones                         → listar proyectos
+ *  - POST   /api/cotizaciones                         → crear
+ *  - GET    /api/cotizaciones/:id                     → uno
+ *  - PUT    /api/cotizaciones/:id                     → guardar (con control de versión → 409)
+ *  - DELETE /api/cotizaciones/:id                     → eliminar (y sus archivos)
+ *  - POST   /api/cotizaciones/:id/archivos            → subir PDF/imagen (cuerpo binario)
+ *  - GET    /api/cotizaciones/:id/archivos/:archivoId → descargar
+ *  - DELETE /api/cotizaciones/:id/archivos/:archivoId → quitar
+ *
+ * Blobs: store "cotizaciones" (clave "proy/<id>") y "cotizaciones-adjuntos"
+ * (clave "<id>/<archivoId>"). La lista de archivos del proyecto solo la
+ * modifican los endpoints de archivos; el PUT la conserva tal cual.
  */
 
-const MAX_ADJUNTO = 4 * 1024 * 1024; // las funciones aceptan ~6 MB de cuerpo
-const TIPOS_ADJUNTO = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
-const ESTATUS = ["Solicitada", "Recibida", "Aprobada", "Rechazada"];
-const MAX_PARTIDAS = 300;
+const MAX_ARCHIVO = 4 * 1024 * 1024; // las funciones aceptan ~6 MB de cuerpo
+const TIPOS = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const ID = /^[\w-]{1,48}$/;
 
 const txt = (v, max = 300) => String(v ?? "").trim().slice(0, max);
 const num = (v) => {
   const n = Number(v);
   return Number.isFinite(n) ? Math.round(n * 10000) / 10000 : 0;
 };
-const fechaISO = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? String(v) : "");
+const moneda = (v) => (v === "USD" ? "USD" : "MXN");
+const nuevoId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const idOk = (v) => (ID.test(String(v || "")) ? String(v) : nuevoId());
 
-/** Normaliza lo que manda el cliente: solo campos conocidos y con tope de tamaño. */
-function limpiar(body) {
-  const partidas = Array.isArray(body?.partidas) ? body.partidas.slice(0, MAX_PARTIDAS) : [];
+function limpiarProyecto(b) {
+  const partidas = Array.isArray(b?.partidas) ? b.partidas.slice(0, 400) : [];
   return {
-    proyecto: txt(body?.proyecto, 120),
-    cliente: txt(body?.cliente, 160),
-    proveedor: txt(body?.proveedor, 160),
-    contacto: txt(body?.contacto, 160),
-    telefono: txt(body?.telefono, 60),
-    correo: txt(body?.correo, 160),
-    folioProveedor: txt(body?.folioProveedor, 80),
-    fecha: fechaISO(body?.fecha),
-    vigencia: fechaISO(body?.vigencia),
-    moneda: body?.moneda === "USD" ? "USD" : "MXN",
-    entrega: txt(body?.entrega, 160),
-    condicionesPago: txt(body?.condicionesPago, 160),
-    estatus: ESTATUS.includes(body?.estatus) ? body.estatus : "Recibida",
-    iva: body?.iva !== false,
-    notas: txt(body?.notas, 4000),
-    partidas: partidas
-      .map((p) => ({
-        descripcion: txt(p?.descripcion, 400),
-        marca: txt(p?.marca, 160),
+    nombre: txt(b?.nombre, 160),
+    cliente: txt(b?.cliente, 160),
+    folio: txt(b?.folio, 80),
+    moneda: moneda(b?.moneda),
+    tipoCambio: num(b?.tipoCambio),
+    margenObjetivo: num(b?.margenObjetivo ?? 20),
+    estatus: b?.estatus === "Comprado" ? "Comprado" : "Cotizando",
+    notas: txt(b?.notas, 4000),
+    partidas: partidas.map((p) => {
+      const ofertas = Array.isArray(p?.ofertas) ? p.ofertas.slice(0, 40) : [];
+      const limpias = ofertas.map((o) => ({
+        id: idOk(o?.id),
+        proveedor: txt(o?.proveedor, 160),
+        precio: num(o?.precio),
+        moneda: moneda(o?.moneda),
+        entrega: txt(o?.entrega, 120),
+        notas: txt(o?.notas, 600),
+        archivoId: ID.test(String(o?.archivoId || "")) ? String(o.archivoId) : "",
+      }));
+      const elegida = limpias.some((o) => o.id === p?.elegida) ? String(p.elegida) : "";
+      return {
+        id: idOk(p?.id),
+        descripcion: txt(p?.descripcion, 600),
+        modelo: txt(p?.modelo, 200),
         cantidad: num(p?.cantidad),
         unidad: txt(p?.unidad, 30),
-        precio: num(p?.precio),
-      }))
-      .filter((p) => p.descripcion || p.marca || p.precio),
+        venta: num(p?.venta),
+        costoEst: num(p?.costoEst),
+        notas: txt(p?.notas, 1000),
+        ofertas: limpias,
+        elegida,
+      };
+    }),
   };
-}
-
-async function siguienteFolio(store) {
-  const anio = new Date().getFullYear();
-  const key = `meta/folio-${anio}`;
-  const actual = (await store.get(key, { type: "json" }).catch(() => null))?.n || 0;
-  const n = actual + 1;
-  await store.setJSON(key, { n });
-  return `COT-${anio}-${String(n).padStart(3, "0")}`;
 }
 
 export default async (req, context) => {
   const email = emailDeSesion(req);
-  if (!email) {
-    return Response.json({ error: "Sesión inválida o expirada" }, { status: 401 });
-  }
+  if (!email) return Response.json({ error: "Sesión inválida o expirada" }, { status: 401 });
 
   const store = getStore({ name: "cotizaciones", consistency: "strong" });
   const archivos = getStore({ name: "cotizaciones-adjuntos", consistency: "strong" });
   const id = context.params?.id ? String(context.params.id) : "";
-  const esAdjunto = new URL(req.url).pathname.endsWith("/adjunto");
+  const archivoId = context.params?.archivoId ? String(context.params.archivoId) : "";
+  const esArchivos = new URL(req.url).pathname.includes("/archivos");
 
-  if (id && !/^[\w-]{1,64}$/.test(id)) {
+  if ((id && !ID.test(id)) || (archivoId && !ID.test(archivoId))) {
     return Response.json({ error: "Id inválido" }, { status: 400 });
   }
 
-  /* ───────────── Archivo adjunto ───────────── */
-  if (id && esAdjunto) {
-    const cot = await store.get(`cot/${id}`, { type: "json" }).catch(() => null);
-    if (!cot) return Response.json({ error: "La cotización no existe" }, { status: 404 });
+  const leer = (pid) => store.get(`proy/${pid}`, { type: "json" }).catch(() => null);
 
-    if (req.method === "GET") {
-      const r = await archivos.getWithMetadata(id, { type: "arrayBuffer" }).catch(() => null);
-      if (!r) return Response.json({ error: "Sin archivo" }, { status: 404 });
+  /* ───────────── Archivos ───────────── */
+  if (id && esArchivos) {
+    const proy = await leer(id);
+    if (!proy) return Response.json({ error: "El proyecto no existe" }, { status: 404 });
+
+    if (req.method === "POST" && !archivoId) {
+      const tipo = (req.headers.get("content-type") || "").split(";")[0].trim();
+      if (!TIPOS.includes(tipo)) {
+        return Response.json({ error: "Solo PDF o imagen (JPG, PNG, WebP)" }, { status: 400 });
+      }
+      const buf = await req.arrayBuffer();
+      if (buf.byteLength === 0 || buf.byteLength > MAX_ARCHIVO) {
+        return Response.json({ error: "El archivo pesa más de 4 MB" }, { status: 413 });
+      }
+      let nombre = "archivo";
+      try {
+        nombre = txt(decodeURIComponent(req.headers.get("x-file-name") || ""), 160) || nombre;
+      } catch {
+        /* nombre por defecto */
+      }
+      const rol = req.headers.get("x-file-rol") === "nuestra" ? "nuestra" : "proveedor";
+      const archivo = { id: nuevoId(), nombre, tipo, tamano: buf.byteLength, rol, subido: Date.now(), subidoPor: email };
+      await archivos.set(`${id}/${archivo.id}`, buf, { metadata: { tipo, nombre } });
+      // Se relee para no pisar un guardado que haya entrado mientras subía el archivo.
+      const actual = (await leer(id)) || proy;
+      await store.setJSON(`proy/${id}`, { ...actual, archivos: [...(actual.archivos || []), archivo] });
+      return Response.json({ archivo }, { status: 201 });
+    }
+
+    if (req.method === "GET" && archivoId) {
+      const r = await archivos.getWithMetadata(`${id}/${archivoId}`, { type: "arrayBuffer" }).catch(() => null);
+      if (!r) return Response.json({ error: "No se encontró el archivo" }, { status: 404 });
       return new Response(r.data, {
         headers: {
           "Content-Type": String(r.metadata?.tipo || "application/octet-stream"),
@@ -99,102 +130,80 @@ export default async (req, context) => {
       });
     }
 
-    if (req.method === "PUT") {
-      const tipo = (req.headers.get("content-type") || "").split(";")[0].trim();
-      if (!TIPOS_ADJUNTO.includes(tipo)) {
-        return Response.json({ error: "Solo PDF o imagen (JPG, PNG, WebP)" }, { status: 400 });
-      }
-      const buf = await req.arrayBuffer();
-      if (buf.byteLength === 0 || buf.byteLength > MAX_ADJUNTO) {
-        return Response.json({ error: "El archivo pesa más de 4 MB" }, { status: 413 });
-      }
-      let nombre = "cotizacion";
-      try {
-        nombre = txt(decodeURIComponent(req.headers.get("x-file-name") || ""), 160) || nombre;
-      } catch {
-        /* nombre por defecto */
-      }
-      await archivos.set(id, buf, { metadata: { tipo, nombre } });
-      const adjunto = { nombre, tipo, tamano: buf.byteLength };
-      await store.setJSON(`cot/${id}`, { ...cot, adjunto, actualizado: Date.now(), actualizadoPor: email });
-      return Response.json({ adjunto });
-    }
-
-    if (req.method === "DELETE") {
-      await archivos.delete(id);
-      await store.setJSON(`cot/${id}`, { ...cot, adjunto: null, actualizado: Date.now(), actualizadoPor: email });
+    if (req.method === "DELETE" && archivoId) {
+      await archivos.delete(`${id}/${archivoId}`);
+      await store.setJSON(`proy/${id}`, {
+        ...proy,
+        archivos: (proy.archivos || []).filter((a) => a.id !== archivoId),
+      });
       return new Response(null, { status: 204 });
     }
 
     return Response.json({ error: "Método no permitido" }, { status: 405 });
   }
 
-  /* ───────────── Cotizaciones ───────────── */
+  /* ───────────── Proyectos ───────────── */
   if (req.method === "GET" && !id) {
-    const { blobs } = await store.list({ prefix: "cot/" });
-    const items = await Promise.all(
-      blobs.map((b) => store.get(b.key, { type: "json" }).catch(() => null)),
-    );
+    const { blobs } = await store.list({ prefix: "proy/" });
+    const items = await Promise.all(blobs.map((b) => store.get(b.key, { type: "json" }).catch(() => null)));
     return Response.json({ items: items.filter(Boolean) });
   }
 
+  if (req.method === "GET" && id) {
+    const proy = await leer(id);
+    return proy ? Response.json({ item: proy }) : Response.json({ error: "El proyecto no existe" }, { status: 404 });
+  }
+
   if (req.method === "POST" && !id) {
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return Response.json({ error: "JSON inválido" }, { status: 400 });
-    }
-    const datos = limpiar(body);
-    if (!datos.proveedor && !datos.proyecto) {
-      return Response.json({ error: "Captura al menos el proyecto o el proveedor" }, { status: 400 });
-    }
-    const nuevoId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const body = await req.json().catch(() => null);
+    if (!body) return Response.json({ error: "JSON inválido" }, { status: 400 });
+    const datos = limpiarProyecto(body);
+    if (!datos.nombre) return Response.json({ error: "Ponle nombre al proyecto" }, { status: 400 });
     const ahora = Date.now();
-    const cot = {
+    const proy = {
       ...datos,
-      id: nuevoId,
-      folio: await siguienteFolio(store),
-      adjunto: null,
+      id: nuevoId(),
+      archivos: [],
+      version: 1,
       creadoPor: email,
       actualizadoPor: email,
       creado: ahora,
       actualizado: ahora,
     };
-    await store.setJSON(`cot/${nuevoId}`, cot);
-    return Response.json({ item: cot }, { status: 201 });
+    await store.setJSON(`proy/${proy.id}`, proy);
+    return Response.json({ item: proy }, { status: 201 });
   }
 
   if (req.method === "PUT" && id) {
-    let body;
-    try {
-      body = await req.json();
-    } catch {
-      return Response.json({ error: "JSON inválido" }, { status: 400 });
+    const body = await req.json().catch(() => null);
+    if (!body) return Response.json({ error: "JSON inválido" }, { status: 400 });
+    const existente = await leer(id);
+    if (!existente) return Response.json({ error: "El proyecto ya no existe" }, { status: 404 });
+    if (Number(body.version) !== Number(existente.version)) {
+      return Response.json(
+        { error: "Otra persona modificó este proyecto mientras lo editabas.", item: existente },
+        { status: 409 },
+      );
     }
-    const existente = await store.get(`cot/${id}`, { type: "json" }).catch(() => null);
-    if (!existente) return Response.json({ error: "La cotización ya no existe" }, { status: 404 });
-    const datos = limpiar(body);
-    if (!datos.proveedor && !datos.proyecto) {
-      return Response.json({ error: "Captura al menos el proyecto o el proveedor" }, { status: 400 });
-    }
-    // id, folio, adjunto y autoría no se pueden cambiar desde el cliente
-    const cot = {
+    const datos = limpiarProyecto(body);
+    if (!datos.nombre) return Response.json({ error: "Ponle nombre al proyecto" }, { status: 400 });
+    const proy = {
       ...existente,
       ...datos,
       id: existente.id,
-      folio: existente.folio,
-      adjunto: existente.adjunto ?? null,
+      archivos: existente.archivos || [],
+      version: (existente.version || 1) + 1,
       actualizadoPor: email,
       actualizado: Date.now(),
     };
-    await store.setJSON(`cot/${id}`, cot);
-    return Response.json({ item: cot });
+    await store.setJSON(`proy/${id}`, proy);
+    return Response.json({ item: proy });
   }
 
   if (req.method === "DELETE" && id) {
-    await store.delete(`cot/${id}`);
-    await archivos.delete(id).catch(() => {});
+    const { blobs } = await archivos.list({ prefix: `${id}/` });
+    await Promise.all(blobs.map((b) => archivos.delete(b.key)));
+    await store.delete(`proy/${id}`);
     return new Response(null, { status: 204 });
   }
 
@@ -202,5 +211,10 @@ export default async (req, context) => {
 };
 
 export const config = {
-  path: ["/api/cotizaciones", "/api/cotizaciones/:id", "/api/cotizaciones/:id/adjunto"],
+  path: [
+    "/api/cotizaciones",
+    "/api/cotizaciones/:id",
+    "/api/cotizaciones/:id/archivos",
+    "/api/cotizaciones/:id/archivos/:archivoId",
+  ],
 };
