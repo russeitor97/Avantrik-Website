@@ -1,4 +1,6 @@
+import { Suspense, lazy, useCallback, useState } from "react";
 import { Link, useParams } from "wouter";
+import { Image as ImageIcon, Loader2, Rotate3d } from "lucide-react";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { QuoteForm } from "@/components/ductos/QuoteForm";
@@ -11,6 +13,10 @@ import NotFound from "@/pages/not-found";
 
 const WHATSAPP_URL = "https://walink.co/e1h4ub";
 
+// three.js solo se descarga cuando alguien pide ver la pieza en 3D.
+const cargarVisor = () => import("@/components/productos/Visor3D");
+const Visor3D = lazy(cargarVisor);
+
 const T = {
   es: {
     productos: "Productos",
@@ -21,6 +27,11 @@ const T = {
     formH2: "Solicitar cotización",
     formIntro: "Indique medidas y cantidad si ya las tiene. Si no, con la descripción del proyecto podemos empezar.",
     suf: "Ducto galvanizado a la medida | Avantrik",
+    ver3d: "Girar en 3D",
+    verFoto: "Ver foto",
+    cargando: "Cargando modelo 3D…",
+    ayuda: "Arrastra para girar · rueda o pellizco para acercar",
+    sinWebgl: "Su navegador no puede mostrar el modelo 3D.",
   },
   en: {
     productos: "Products",
@@ -31,6 +42,11 @@ const T = {
     formH2: "Request a quote",
     formIntro: "Include sizes and quantity if you have them. If not, a project description is enough to start.",
     suf: "Custom galvanized duct | Avantrik",
+    ver3d: "Rotate in 3D",
+    verFoto: "View photo",
+    cargando: "Loading 3D model…",
+    ayuda: "Drag to rotate · scroll or pinch to zoom",
+    sinWebgl: "Your browser can't display the 3D model.",
   },
 };
 
@@ -96,9 +112,7 @@ function Ficha({ slug }: { slug: string }) {
 
       <section className="py-12">
         <div className="container mx-auto grid items-start gap-10 px-4 lg:grid-cols-[1.15fr_1fr]">
-          <div className="rounded-sm border border-border bg-white">
-            <img src={imagenDe(slug)} alt={d.nombre} width={1200} height={900} className="h-auto w-full" fetchPriority="high" />
-          </div>
+          <VistaProducto key={slug} slug={slug} alt={d.nombre} t={t} />
           <div>
             <h1 className="font-heading text-4xl font-bold">{d.nombre}</h1>
             <p className="mt-4 leading-relaxed text-muted-foreground">{d.descripcion}</p>
@@ -143,5 +157,53 @@ function Ficha({ slug }: { slug: string }) {
         </div>
       </section>
     </Layout>
+  );
+}
+
+/** Foto de la pieza, con botón para cambiar al visor 3D (y regresar). */
+function VistaProducto({ slug, alt, t }: { slug: string; alt: string; t: (typeof T)["es"] }) {
+  const [modo, setModo] = useState<"foto" | "3d">("foto");
+  const [sinWebgl, setSinWebgl] = useState(false);
+  const alFallar = useCallback(() => {
+    setSinWebgl(true);
+    setModo("foto");
+  }, []);
+  const boton =
+    "absolute bottom-3 right-3 inline-flex items-center gap-2 rounded-sm border border-border bg-white px-3 py-2 text-sm font-semibold text-foreground shadow-sm transition-colors hover:border-primary";
+
+  return (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-sm border border-border bg-white">
+      {modo === "foto" ? (
+        <>
+          <img src={imagenDe(slug)} alt={alt} width={1200} height={900} className="h-full w-full object-contain" {...{ fetchpriority: "high" }} />
+          {!sinWebgl ? (
+            <button type="button" onClick={() => setModo("3d")} onPointerEnter={cargarVisor} onFocus={cargarVisor} className={boton}>
+              <Rotate3d className="h-4 w-4" /> {t.ver3d}
+            </button>
+          ) : (
+            <p className="absolute bottom-3 right-3 text-xs text-muted-foreground">{t.sinWebgl}</p>
+          )}
+        </>
+      ) : (
+        <>
+          <Suspense
+            fallback={
+              <div className="relative h-full w-full">
+                <img src={imagenDe(slug)} alt={alt} className="h-full w-full object-contain opacity-40" />
+                <p className="absolute inset-0 flex items-center justify-center gap-2 text-sm font-semibold text-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t.cargando}
+                </p>
+              </div>
+            }
+          >
+            <Visor3D slug={slug} onError={alFallar} />
+          </Suspense>
+          <p className="pointer-events-none absolute bottom-3 left-3 hidden text-xs text-muted-foreground sm:block">{t.ayuda}</p>
+          <button type="button" onClick={() => setModo("foto")} className={boton}>
+            <ImageIcon className="h-4 w-4" /> {t.verFoto}
+          </button>
+        </>
+      )}
+    </div>
   );
 }

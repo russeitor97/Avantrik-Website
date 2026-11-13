@@ -17,13 +17,20 @@ import puppeteer from "puppeteer-core";
 const aqui = path.dirname(fileURLToPath(import.meta.url));
 const raiz = path.resolve(aqui, "../..");
 const salida = path.join(raiz, "client/public/ductos");
+const libreria = path.join(raiz, "client/src/lib/ductos3d"); // geometría y estudio compartidos con el sitio
 const CHROME = process.env.CHROME_PATH || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 const TIPOS = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript" };
 
 const servidor = http.createServer((req, res) => {
   const url = new URL(req.url, "http://x");
-  const base = url.pathname.startsWith("/three/") ? path.join(raiz, "node_modules") : aqui;
-  const archivo = path.join(base, decodeURIComponent(url.pathname));
+  let base = aqui;
+  let ruta = decodeURIComponent(url.pathname);
+  if (ruta.startsWith("/three/")) base = path.join(raiz, "node_modules");
+  else if (ruta.startsWith("/lib/")) {
+    base = libreria;
+    ruta = ruta.slice(4);
+  }
+  const archivo = path.join(base, ruta);
   if (!archivo.startsWith(base) || !fs.existsSync(archivo) || fs.statSync(archivo).isDirectory()) {
     res.writeHead(404).end();
     return;
@@ -34,14 +41,13 @@ const servidor = http.createServer((req, res) => {
 await new Promise((ok) => servidor.listen(0, "127.0.0.1", ok));
 const origen = `http://127.0.0.1:${servidor.address().port}`;
 
-const { PIEZAS } = await import("./piezas.js").catch(() => ({ PIEZAS: null }));
+
 const pedidas = process.argv.slice(2);
 const nombres = pedidas.length ? pedidas.filter((n) => n !== "familia") : await listar();
 const conFamilia = !pedidas.length || pedidas.includes("familia");
 
 async function listar() {
-  if (PIEZAS) return Object.keys(PIEZAS);
-  const src = fs.readFileSync(path.join(aqui, "piezas.js"), "utf8");
+  const src = fs.readFileSync(path.join(libreria, "piezas.js"), "utf8");
   const cuerpo = src.slice(src.indexOf("export const PIEZAS"), src.indexOf("export const FAMILIA"));
   return [...cuerpo.matchAll(/^ {2}"?([a-z0-9-]+)"?: \(\) =>/gm)].map((m) => m[1]);
 }

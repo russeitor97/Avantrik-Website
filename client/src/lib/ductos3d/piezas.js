@@ -1,7 +1,8 @@
 /**
- * Catálogo de piezas. Cada función devuelve { galva: [geometrías], lona: [geometrías] }
- * en metros, apoyada como se exhibiría en una mesa (la escena la centra y la baja al piso).
- * El nombre de cada entrada es el nombre del archivo: codo-90 → codo-90.webp
+ * Catálogo de piezas en 3D. Lo usan el visor del sitio (Visor3D) y el script
+ * de imágenes (scripts/ductos-render). Cada función devuelve las geometrías de
+ * la pieza en metros, apoyada como se exhibiría en una mesa.
+ * El nombre de cada entrada es el slug del producto: codo-90 → codo-90.webp
  */
 import * as THREE from "three";
 import { V, X, Y, Z, seccion, lamina, brida, arco, pittsburgh, quiebres, barrenos, ruta, panel, cinta } from "./geometria.js";
@@ -202,7 +203,7 @@ export const FAMILIA = [
   ["codo-90", -1.2, -1.7, 0],
   ["tee", 0.5, -1.6, -0.2],
   ["desviacion", 2.15, -1.55, 0.1],
-  ["cuello-ganso", 3.6, -1.45, 0.15],
+  ["cuello-ganso", 3.6, -1.45, -0.35],
 
   ["reduccion-concentrica", -3.45, -0.05, 0.3],
   ["yee-pantalon", -2.1, 0.0, 0],
