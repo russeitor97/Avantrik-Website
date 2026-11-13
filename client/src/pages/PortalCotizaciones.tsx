@@ -1,210 +1,206 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSeo } from "@/lib/seo";
-import { Link, useLocation, useSearch } from "wouter";
+import { Link, useLocation } from "wouter";
 import { Layout } from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { useToast } from "@/hooks/use-toast";
 import { getSession, authHeaders, clearSession } from "@/lib/portal-auth";
-import { leerPdf, type PartidaLeida, type ResultadoPdf } from "@/lib/pdf-partidas";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangle, ArrowLeft, Check, CheckCircle2, ClipboardCopy, FileText, FileUp, Loader2, LogOut,
-  MessageCircle, Paperclip, PencilLine, Plus, RefreshCcw, Search, Trash2, X, FolderKanban, Truck,
+  ArrowLeft, ClipboardCopy, Copy, FileText, Loader2, LogOut, Package, Paperclip, Plus,
+  RefreshCcw, Save, Search, Trash2, X, FileSpreadsheet, PencilLine,
 } from "lucide-react";
 
 /* ═════════════════════════ Tipos ═════════════════════════ */
 
+const ESTATUS = ["Solicitada", "Recibida", "Aprobada", "Rechazada"] as const;
+type Estatus = (typeof ESTATUS)[number];
 type Moneda = "MXN" | "USD";
 
-interface Archivo {
-  id: string;
+interface Partida {
+  descripcion: string;
+  marca: string;
+  cantidad: number;
+  unidad: string;
+  precio: number;
+}
+
+interface Adjunto {
   nombre: string;
   tipo: string;
   tamano: number;
-  rol: "nuestra" | "proveedor";
-  subido: number;
-  subidoPor: string;
 }
 
-interface Oferta {
+interface Cotizacion {
   id: string;
+  folio: string;
+  proyecto: string;
+  cliente: string;
   proveedor: string;
-  precio: number; // P.U. sin IVA, en su moneda
+  contacto: string;
+  telefono: string;
+  correo: string;
+  folioProveedor: string;
+  fecha: string;
+  vigencia: string;
   moneda: Moneda;
   entrega: string;
-  notas: string;
-  archivoId: string;
-}
-
-interface Partida {
-  id: string;
-  descripcion: string;
-  modelo: string;
-  cantidad: number;
-  unidad: string;
-  venta: number; // P.U. sin IVA que cotizamos al cliente, en la moneda del proyecto
-  costoEst: number; // costo que se estimó al cotizar (opcional)
-  notas: string;
-  ofertas: Oferta[];
-  elegida: string;
-}
-
-interface Proyecto {
-  id: string;
-  nombre: string;
-  cliente: string;
-  folio: string;
-  moneda: Moneda;
-  tipoCambio: number;
-  margenObjetivo: number;
-  estatus: "Cotizando" | "Comprado";
+  condicionesPago: string;
+  estatus: Estatus;
+  iva: boolean;
   notas: string;
   partidas: Partida[];
-  archivos: Archivo[];
-  version: number;
+  adjunto: Adjunto | null;
   creadoPor: string;
   actualizadoPor: string;
   creado: number;
   actualizado: number;
 }
 
+/** En el editor los números se manejan como texto para no pelear con el input. */
+interface PartidaDraft {
+  uid: string;
+  descripcion: string;
+  marca: string;
+  cantidad: string;
+  unidad: string;
+  precio: string;
+}
+
+type Draft = Omit<
+  Cotizacion,
+  "id" | "folio" | "partidas" | "adjunto" | "creadoPor" | "actualizadoPor" | "creado" | "actualizado"
+> & {
+  id?: string;
+  folio?: string;
+  adjunto?: Adjunto | null;
+  partidas: PartidaDraft[];
+};
+
 /* ═════════════════════════ Utilidades ═════════════════════════ */
 
-const MAX_ARCHIVO = 4 * 1024 * 1024;
-const UNIDADES = ["pza", "m", "m²", "kg", "lt", "rollo", "caja", "juego", "lote", "servicio", "hr"];
+const IVA = 0.16;
+const MAX_ADJUNTO = 4 * 1024 * 1024;
+const UNIDADES = ["pza", "m", "m²", "m³", "kg", "lt", "rollo", "caja", "juego", "lote", "servicio", "hr"];
 
 class SesionExpirada extends Error {}
 
-const nid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+const uid = () => Math.random().toString(36).slice(2, 10);
 
-function dinero(n: number, m: Moneda = "MXN"): string {
+function hoy(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function fechaCorta(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  return new Date(`${iso}T12:00:00`).toLocaleDateString("es-MX", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function dinero(n: number, moneda: Moneda = "MXN"): string {
   return new Intl.NumberFormat("es-MX", {
     style: "currency",
-    currency: m,
-    currencyDisplay: m === "MXN" ? "narrowSymbol" : "code",
+    currency: moneda,
+    currencyDisplay: moneda === "MXN" ? "narrowSymbol" : "code",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n || 0);
 }
-
-const pct = (n: number | null) => (n === null ? "—" : `${(n * 100).toFixed(1)}%`);
 
 const aNumero = (s: string) => {
   const n = Number(String(s).replace(/[,\s$]/g, ""));
   return Number.isFinite(n) ? n : 0;
 };
 
+function totales(partidas: { cantidad: number; precio: number }[], iva: boolean) {
+  const subtotal = partidas.reduce((s, p) => s + (p.cantidad || 0) * (p.precio || 0), 0);
+  const impuesto = iva ? subtotal * IVA : 0;
+  return { subtotal, impuesto, total: subtotal + impuesto };
+}
+
 const normalizar = (s: string) =>
-  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
 
-function coincide(texto: string, q: string) {
+/** Todas las palabras de la búsqueda deben aparecer (en cualquier orden). */
+function coincide(texto: string, q: string): boolean {
   const t = normalizar(texto);
-  return normalizar(q).split(" ").filter(Boolean).every((w) => t.includes(w));
+  return normalizar(q)
+    .split(" ")
+    .filter(Boolean)
+    .every((w) => t.includes(w));
 }
 
-/** Precio de la oferta convertido a la moneda del proyecto (null si falta tipo de cambio). */
-function enMonedaProyecto(o: Oferta, p: Pick<Proyecto, "moneda" | "tipoCambio">): number | null {
-  if (o.moneda === p.moneda) return o.precio;
-  if (!p.tipoCambio) return null;
-  return o.moneda === "USD" ? o.precio * p.tipoCambio : o.precio / p.tipoCambio;
-}
+const vencida = (c: { vigencia: string; estatus: Estatus }) =>
+  !!c.vigencia && c.vigencia < hoy() && c.estatus !== "Rechazada" && c.estatus !== "Aprobada";
 
-interface Analisis {
-  costoUnit: number | null; // del proveedor elegido o, si no hay, del más barato
-  oferta: Oferta | null;
-  porElegida: boolean;
-  masBarata: string; // id
-  margen: number | null; // sobre venta
-  utilidad: number | null; // total de la partida
-}
+const ESTILO_ESTATUS: Record<Estatus, string> = {
+  Solicitada: "bg-sky-500/15 text-sky-800",
+  Recibida: "bg-accent/20 text-accent-foreground",
+  Aprobada: "bg-emerald-500/15 text-emerald-800",
+  Rechazada: "bg-destructive/10 text-destructive",
+};
 
-function analizar(pa: Partida, p: Pick<Proyecto, "moneda" | "tipoCambio">): Analisis {
-  const conv = pa.ofertas
-    .filter((o) => o.precio > 0)
-    .map((o) => ({ o, c: enMonedaProyecto(o, p) }))
-    .filter((x): x is { o: Oferta; c: number } => x.c !== null)
-    .sort((a, b) => a.c - b.c);
-  const masBarata = conv[0]?.o.id || "";
-  const elegida = conv.find((x) => x.o.id === pa.elegida);
-  const usar = elegida || conv[0];
-  if (!usar) return { costoUnit: null, oferta: null, porElegida: false, masBarata, margen: null, utilidad: null };
-  const margen = pa.venta > 0 ? (pa.venta - usar.c) / pa.venta : null;
+function vacio(): Draft {
   return {
-    costoUnit: usar.c,
-    oferta: usar.o,
-    porElegida: !!elegida,
-    masBarata,
-    margen,
-    utilidad: (pa.venta - usar.c) * (pa.cantidad || 0),
+    proyecto: "",
+    cliente: "",
+    proveedor: "",
+    contacto: "",
+    telefono: "",
+    correo: "",
+    folioProveedor: "",
+    fecha: hoy(),
+    vigencia: "",
+    moneda: "MXN",
+    entrega: "",
+    condicionesPago: "",
+    estatus: "Recibida",
+    iva: true,
+    notas: "",
+    partidas: [{ uid: uid(), descripcion: "", marca: "", cantidad: "1", unidad: "pza", precio: "" }],
   };
 }
 
-function totalesProyecto(p: Proyecto) {
-  let venta = 0;
-  let ventaCotizada = 0;
-  let costo = 0;
-  let cotizadas = 0;
-  let elegidas = 0;
-  for (const pa of p.partidas) {
-    const v = pa.venta * (pa.cantidad || 0);
-    venta += v;
-    const a = analizar(pa, p);
-    if (a.costoUnit !== null) {
-      cotizadas++;
-      ventaCotizada += v;
-      costo += a.costoUnit * (pa.cantidad || 0);
-      if (a.porElegida) elegidas++;
-    }
-  }
-  const utilidad = ventaCotizada - costo;
+function aDraft(c: Cotizacion): Draft {
+  const { partidas, creadoPor: _a, actualizadoPor: _b, creado: _c, actualizado: _d, ...resto } = c;
   return {
-    venta,
-    ventaCotizada,
-    costo,
-    utilidad,
-    margen: ventaCotizada > 0 ? utilidad / ventaCotizada : null,
-    cotizadas,
-    elegidas,
-    total: p.partidas.length,
+    ...resto,
+    partidas: partidas.map((p) => ({
+      uid: uid(),
+      descripcion: p.descripcion,
+      marca: p.marca,
+      cantidad: String(p.cantidad ?? ""),
+      unidad: p.unidad,
+      precio: p.precio ? String(p.precio) : "",
+    })),
   };
 }
 
-function colorMargen(m: number | null, objetivo: number) {
-  if (m === null) return "text-muted-foreground";
-  if (m < 0) return "text-destructive";
-  if (m * 100 < objetivo) return "text-amber-700";
-  return "text-emerald-700";
-}
-
-async function api(path: string, init: RequestInit = {}): Promise<Response> {
-  const res = await fetch(path, {
-    ...init,
-    headers: { ...(init.headers as Record<string, string>), ...authHeaders() },
-  });
-  if (res.status === 401) throw new SesionExpirada();
-  return res;
-}
-
-async function errorDe(res: Response, fallback: string) {
-  const data = await res.json().catch(() => null);
-  return new Error(data?.error || fallback);
-}
-
-/** Fotos grandes se comprimen; los PDF van tal cual (máx 4 MB). */
+/** Las fotos grandes se comprimen; los PDF se suben tal cual (máx 4 MB). */
 function prepararArchivo(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/") || file.size < 1.5 * 1024 * 1024) return Promise.resolve(file);
   return new Promise((res, rej) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
-      const k = Math.min(1, 2000 / Math.max(img.width, img.height));
+      const max = 2000;
+      const k = Math.min(1, max / Math.max(img.width, img.height));
       const canvas = document.createElement("canvas");
       canvas.width = Math.round(img.width * k);
       canvas.height = Math.round(img.height * k);
@@ -219,113 +215,55 @@ function prepararArchivo(file: File): Promise<Blob> {
   });
 }
 
-function validarArchivo(f: File): string | null {
-  const ok = f.type === "application/pdf" || /^image\/(jpeg|png|webp)$/.test(f.type);
-  if (!ok) return "Sube un PDF o una foto (JPG, PNG).";
-  if (f.type === "application/pdf" && f.size > MAX_ARCHIVO) return "El PDF pesa más de 4 MB.";
-  return null;
-}
-
-async function subirArchivo(proyectoId: string, f: File, rol: Archivo["rol"]): Promise<Archivo> {
-  const blob = await prepararArchivo(f);
-  if (blob.size > MAX_ARCHIVO) throw new Error("El archivo pesa más de 4 MB.");
-  const tipo = blob.type || f.type;
-  const nombre = tipo === "image/jpeg" && f.type !== "image/jpeg" ? f.name.replace(/\.\w+$/, ".jpg") : f.name;
-  const res = await api(`/api/cotizaciones/${proyectoId}/archivos`, {
-    method: "POST",
-    headers: { "Content-Type": tipo, "X-File-Name": encodeURIComponent(nombre), "X-File-Rol": rol },
-    body: blob,
+async function api(path: string, init: RequestInit = {}): Promise<Response> {
+  const res = await fetch(path, {
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), ...authHeaders() },
   });
-  if (!res.ok) throw await errorDe(res, "No se pudo subir el archivo.");
-  return (await res.json()).archivo;
+  if (res.status === 401) throw new SesionExpirada();
+  return res;
 }
 
-async function bajarArchivo(proyectoId: string, a: Archivo): Promise<Blob> {
-  const res = await api(`/api/cotizaciones/${proyectoId}/archivos/${a.id}`);
-  if (!res.ok) throw await errorDe(res, "No se pudo abrir el archivo.");
-  return res.blob();
+async function errorDe(res: Response, fallback: string): Promise<Error> {
+  const data = await res.json().catch(() => null);
+  return new Error(data?.error || fallback);
 }
 
-/* ─────────── Resumen para el grupo (WhatsApp) y Excel ─────────── */
+const ENCABEZADOS = [
+  "Folio", "Fecha", "Proyecto", "Cliente", "Proveedor", "Estatus", "Descripción",
+  "Marca / Modelo", "Cantidad", "Unidad", "Precio unitario", "Importe", "Moneda",
+];
 
-function resumenTexto(p: Proyecto): string {
-  const t = totalesProyecto(p);
-  const l: string[] = [];
-  l.push(`*${p.nombre}* — comparativo de proveedores`);
-  const sub = [p.cliente && `Cliente: ${p.cliente}`, p.folio && `Cot. ${p.folio}`].filter(Boolean).join(" · ");
-  if (sub) l.push(sub);
-  l.push(`_Precios unitarios sin IVA${p.tipoCambio ? ` · TC USD ${dinero(p.tipoCambio)}` : ""}_`);
-  p.partidas.forEach((pa, i) => {
-    const a = analizar(pa, p);
-    l.push("");
-    l.push(`*${i + 1}. ${pa.descripcion || "Sin descripción"}* (${pa.cantidad} ${pa.unidad})`);
-    l.push(`Venta: ${dinero(pa.venta, p.moneda)} c/u`);
-    if (pa.ofertas.length === 0) {
-      l.push("⏳ Sin cotizar todavía");
-      return;
-    }
-    const ordenadas = pa.ofertas
-      .slice()
-      .sort((x, y) => (enMonedaProyecto(x, p) ?? Infinity) - (enMonedaProyecto(y, p) ?? Infinity));
-    for (const o of ordenadas) {
-      const c = enMonedaProyecto(o, p);
-      const m = c !== null && pa.venta > 0 ? (pa.venta - c) / pa.venta : null;
-      const marca = o.id === pa.elegida ? "✅" : "•";
-      const precio =
-        o.moneda !== p.moneda && c !== null
-          ? `${dinero(o.precio, o.moneda)} (≈${dinero(c, p.moneda)})`
-          : dinero(o.precio, o.moneda);
-      const extras = [o.entrega, `margen ${pct(m)}`, o.id === a.masBarata && ordenadas.length > 1 ? "más barato" : ""]
-        .filter(Boolean)
-        .join(" · ");
-      l.push(`${marca} ${o.proveedor || "Proveedor"}: ${precio} · ${extras}`);
-    }
-  });
-  l.push("");
-  l.push(`*Totales* (${t.cotizadas} de ${t.total} partidas cotizadas)`);
-  l.push(`Venta: ${dinero(t.ventaCotizada, p.moneda)}`);
-  l.push(`Costo: ${dinero(t.costo, p.moneda)}`);
-  l.push(`Utilidad: ${dinero(t.utilidad, p.moneda)} (${pct(t.margen)})`);
-  if (t.elegidas < t.cotizadas) l.push("_Donde no hay ✅ se tomó el proveedor más barato._");
-  return l.join("\n");
-}
-
-function tablaExcel(p: Proyecto): string {
-  const enc = [
-    "#", "Descripción", "Modelo", "Cantidad", "Unidad", `Venta P.U. (${p.moneda})`, "Proveedor", "Precio P.U.",
-    "Moneda", `Precio en ${p.moneda}`, "Entrega", "Margen %", `Utilidad total (${p.moneda})`, "Elegido",
+function filaExcel(c: Cotizacion, p: Partida): string[] {
+  return [
+    c.folio, c.fecha, c.proyecto, c.cliente, c.proveedor, c.estatus, p.descripcion, p.marca,
+    String(p.cantidad), p.unidad, p.precio.toFixed(2), (p.cantidad * p.precio).toFixed(2), c.moneda,
   ];
-  const filas: string[][] = [];
-  p.partidas.forEach((pa, i) => {
-    const base = [String(i + 1), pa.descripcion, pa.modelo, String(pa.cantidad), pa.unidad, pa.venta.toFixed(2)];
-    if (pa.ofertas.length === 0) filas.push([...base, "", "", "", "", "", "", "", ""]);
-    for (const o of pa.ofertas) {
-      const c = enMonedaProyecto(o, p);
-      const m = c !== null && pa.venta > 0 ? (pa.venta - c) / pa.venta : null;
-      filas.push([
-        ...base, o.proveedor, o.precio.toFixed(2), o.moneda, c === null ? "" : c.toFixed(2), o.entrega,
-        m === null ? "" : (m * 100).toFixed(1), c === null ? "" : ((pa.venta - c) * pa.cantidad).toFixed(2),
-        o.id === pa.elegida ? "Sí" : "",
-      ]);
-    }
-  });
-  return [enc, ...filas].map((f) => f.map((v) => String(v).replace(/[\t\n]/g, " ")).join("\t")).join("\n");
 }
 
 /* ═════════════════════════ Página ═════════════════════════ */
 
 export default function PortalCotizaciones() {
-  useSeo({ lang: "es-MX", title: "Cotizaciones | Portal Avantrik", robots: "noindex, nofollow" });
+  useSeo({
+    lang: "es-MX",
+    title: "Cotizaciones | Portal Avantrik",
+    robots: "noindex, nofollow",
+  });
   const { toast } = useToast();
   const [, navigate] = useLocation();
-  const search = useSearch();
-  const abiertoId = new URLSearchParams(search).get("p") || "";
   const session = getSession();
 
-  const [items, setItems] = useState<Proyecto[]>([]);
+  const [items, setItems] = useState<Cotizacion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("cotizaciones");
+  const [editando, setEditando] = useState<Draft | null>(null);
+
+  // filtros de la lista
   const [q, setQ] = useState("");
-  const [creando, setCreando] = useState(false);
+  const [fProyecto, setFProyecto] = useState("");
+  const [fEstatus, setFEstatus] = useState("");
+  // buscador de materiales
+  const [qMat, setQMat] = useState("");
 
   useEffect(() => {
     if (!session) navigate("/portal");
@@ -337,17 +275,22 @@ export default function PortalCotizaciones() {
       navigate("/portal");
       return;
     }
-    toast({ title: "Error", description: err instanceof Error && err.message ? err.message : msg, variant: "destructive" });
+    toast({
+      title: "Error",
+      description: err instanceof Error && err.message ? err.message : msg,
+      variant: "destructive",
+    });
   }
 
   async function cargar() {
     setLoading(true);
     try {
       const res = await api("/api/cotizaciones");
-      if (!res.ok) throw await errorDe(res, "No se pudieron cargar los proyectos.");
-      setItems((await res.json()).items || []);
+      if (!res.ok) throw await errorDe(res, "No se pudieron cargar las cotizaciones.");
+      const data = await res.json();
+      setItems(data.items || []);
     } catch (err) {
-      manejarError(err, "No se pudieron cargar los proyectos.");
+      manejarError(err, "No se pudieron cargar las cotizaciones.");
     } finally {
       setLoading(false);
     }
@@ -358,95 +301,166 @@ export default function PortalCotizaciones() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const proveedores = useMemo(
-    () =>
-      Array.from(new Set(items.flatMap((p) => p.partidas.flatMap((pa) => pa.ofertas.map((o) => o.proveedor))).filter(Boolean))).sort(),
-    [items],
-  );
-
-  const filtrados = useMemo(
+  const ordenadas = useMemo(
     () =>
       items
         .slice()
-        .sort((a, b) => b.actualizado - a.actualizado)
-        .filter(
-          (p) =>
-            !q.trim() ||
-            coincide(
-              [p.nombre, p.cliente, p.folio, ...p.partidas.map((pa) => `${pa.descripcion} ${pa.modelo} ${pa.ofertas.map((o) => o.proveedor).join(" ")}`)].join(" "),
-              q,
-            ),
-        ),
-    [items, q],
+        .sort((a, b) => (b.fecha || "").localeCompare(a.fecha || "") || b.creado - a.creado),
+    [items],
   );
 
-  const abrir = (id: string) => {
-    navigate(`/portal/cotizaciones?p=${id}`);
-    window.scrollTo({ top: 0 });
-  };
-  const cerrar = () => {
-    navigate("/portal/cotizaciones");
-    window.scrollTo({ top: 0 });
-  };
+  const proyectos = useMemo(
+    () => Array.from(new Set(items.map((i) => i.proyecto).filter(Boolean))).sort(),
+    [items],
+  );
+  const proveedores = useMemo(
+    () => Array.from(new Set(items.map((i) => i.proveedor).filter(Boolean))).sort(),
+    [items],
+  );
+  const clientes = useMemo(
+    () => Array.from(new Set(items.map((i) => i.cliente).filter(Boolean))).sort(),
+    [items],
+  );
 
-  async function crear(nombre: string) {
-    try {
-      const res = await api("/api/cotizaciones", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nombre, moneda: "MXN", margenObjetivo: 20, partidas: [] }),
-      });
-      if (!res.ok) throw await errorDe(res, "No se pudo crear el proyecto.");
-      const item: Proyecto = (await res.json()).item;
-      setItems((its) => [item, ...its]);
-      setCreando(false);
-      abrir(item.id);
-    } catch (err) {
-      manejarError(err, "No se pudo crear el proyecto.");
-    }
+  const filtradas = useMemo(
+    () =>
+      ordenadas.filter((c) => {
+        if (fProyecto && c.proyecto !== fProyecto) return false;
+        if (fEstatus && c.estatus !== fEstatus) return false;
+        if (!q.trim()) return true;
+        const texto = [
+          c.folio, c.proyecto, c.cliente, c.proveedor, c.contacto, c.folioProveedor, c.notas,
+          ...c.partidas.map((p) => `${p.descripcion} ${p.marca}`),
+        ].join(" ");
+        return coincide(texto, q);
+      }),
+    [ordenadas, q, fProyecto, fEstatus],
+  );
+
+  const resumen = useMemo(() => {
+    let mxn = 0;
+    let usd = 0;
+    filtradas.forEach((c) => {
+      const { total } = totales(c.partidas, c.iva);
+      if (c.moneda === "USD") usd += total;
+      else mxn += total;
+    });
+    return { mxn, usd, proveedores: new Set(filtradas.map((c) => c.proveedor).filter(Boolean)).size };
+  }, [filtradas]);
+
+  function abrirNueva() {
+    setEditando({ ...vacio(), proyecto: fProyecto });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  const actualizarEnLista = (p: Proyecto) => setItems((its) => its.map((i) => (i.id === p.id ? p : i)));
+  function abrir(c: Cotizacion) {
+    setEditando(aDraft(c));
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
-  async function eliminar(p: Proyecto) {
-    if (!window.confirm(`¿Eliminar el proyecto "${p.nombre}" con todas sus ofertas y archivos? No se puede deshacer.`)) return;
+  /** Misma lista de materiales para pedírsela a otro proveedor y comparar. */
+  function pedirAOtro(c: Cotizacion) {
+    const d = aDraft(c);
+    setEditando({
+      ...vacio(),
+      proyecto: d.proyecto,
+      cliente: d.cliente,
+      moneda: d.moneda,
+      iva: d.iva,
+      estatus: "Solicitada",
+      notas: `Misma lista que ${c.folio} (${c.proveedor || "sin proveedor"}).`,
+      partidas: d.partidas.map((p) => ({ ...p, uid: uid(), precio: "" })),
+    });
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  async function eliminar(c: Cotizacion) {
+    if (!window.confirm(`¿Eliminar ${c.folio} de ${c.proveedor || "proveedor sin nombre"}? No se puede deshacer.`)) return;
     try {
-      const res = await api(`/api/cotizaciones/${p.id}`, { method: "DELETE" });
+      const res = await api(`/api/cotizaciones/${encodeURIComponent(c.id)}`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw await errorDe(res, "No se pudo eliminar.");
-      setItems((its) => its.filter((i) => i.id !== p.id));
-      cerrar();
-      toast({ title: "Proyecto eliminado" });
+      setItems((its) => its.filter((i) => i.id !== c.id));
+      setEditando(null);
+      toast({ title: `${c.folio} eliminada` });
     } catch (err) {
       manejarError(err, "No se pudo eliminar.");
     }
   }
 
+  async function abrirAdjunto(c: Cotizacion) {
+    // La ventana se abre en el clic (antes del await) para que no la bloquee el navegador.
+    const w = window.open("", "_blank");
+    try {
+      const res = await api(`/api/cotizaciones/${encodeURIComponent(c.id)}/adjunto`);
+      if (!res.ok) throw await errorDe(res, "No se pudo abrir el archivo.");
+      const url = URL.createObjectURL(await res.blob());
+      if (w) {
+        w.location.href = url;
+      } else {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = c.adjunto?.nombre || `${c.folio}`;
+        a.click();
+      }
+      setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    } catch (err) {
+      w?.close();
+      manejarError(err, "No se pudo abrir el archivo.");
+    }
+  }
+
+  function copiar(filas: string[][], cuantas: string) {
+    if (filas.length === 0) {
+      toast({ title: "No hay nada que copiar con estos filtros" });
+      return;
+    }
+    const tsv = [ENCABEZADOS, ...filas].map((f) => f.map((v) => v.replace(/[\t\n]/g, " ")).join("\t")).join("\n");
+    navigator.clipboard?.writeText(tsv).then(
+      () => toast({ title: "Copiado", description: `${cuantas}. Pégalo en Excel en la celda A1.` }),
+      () => toast({ title: "Error al copiar", variant: "destructive" }),
+    );
+  }
+
+  function guardada(c: Cotizacion) {
+    setItems((its) => {
+      const i = its.findIndex((x) => x.id === c.id);
+      if (i === -1) return [c, ...its];
+      const copia = its.slice();
+      copia[i] = c;
+      return copia;
+    });
+  }
+
   if (!session) return null;
-  const abierto = items.find((i) => i.id === abiertoId);
 
   return (
     <Layout>
+      {/* Encabezado */}
       <section className="relative overflow-hidden bg-ink-gradient pb-10 pt-28 text-primary-foreground">
         <TechBackdrop />
         <div className="container relative z-10 mx-auto px-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
-              <Link href="/portal" className="mb-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-accent hover:underline">
+              <Link
+                href="/portal"
+                className="mb-3 inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-accent hover:underline"
+              >
                 <ArrowLeft className="h-3.5 w-3.5" /> Portal
               </Link>
               <h1 className="flex items-center gap-3 font-heading text-3xl font-bold text-white md:text-4xl">
-                <FolderKanban className="h-8 w-8 text-accent" /> Cotizaciones
+                <FileSpreadsheet className="h-8 w-8 text-accent" /> Cotizaciones
               </h1>
-              <p className="mt-1 text-sm text-primary-foreground/60">
-                Nuestra cotización vs. precios de proveedores · {session.email}
-              </p>
+              <p className="mt-1 text-sm text-primary-foreground/60">{session.email}</p>
             </div>
             <div className="flex gap-2">
-              {!abiertoId && (
-                <Button variant="outline" size="sm" onClick={cargar} className="rounded-sm border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white">
-                  <RefreshCcw className="mr-2 h-4 w-4" /> Actualizar
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={cargar}
+                className="rounded-sm border-white/25 bg-transparent text-white hover:bg-white/10 hover:text-white"
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" /> Actualizar
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -464,1171 +478,815 @@ export default function PortalCotizaciones() {
       </section>
 
       <section className="container mx-auto max-w-6xl px-4 py-10">
+        {/* datalists compartidos para autocompletar */}
+        <datalist id="dl-proyectos">{proyectos.map((p) => <option key={p} value={p} />)}</datalist>
         <datalist id="dl-proveedores">{proveedores.map((p) => <option key={p} value={p} />)}</datalist>
+        <datalist id="dl-clientes">{clientes.map((p) => <option key={p} value={p} />)}</datalist>
         <datalist id="dl-unidades">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
 
-        {loading ? (
-          <div className="py-20 text-center text-muted-foreground">
-            <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-accent-foreground/70" />
-            Cargando…
-          </div>
-        ) : abiertoId ? (
-          abierto ? (
-            <DetalleProyecto
-              key={abierto.id}
-              inicial={abierto}
-              onVolver={cerrar}
-              onCambio={actualizarEnLista}
-              onEliminar={() => eliminar(abierto)}
-              onError={manejarError}
-            />
-          ) : (
-            <div className="rounded-sm border border-dashed border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
-              Este proyecto ya no existe.{" "}
-              <button type="button" onClick={cerrar} className="font-semibold text-foreground underline underline-offset-2">
-                Volver a la lista
-              </button>
-            </div>
-          )
+        {editando ? (
+          <Editor
+            inicial={editando}
+            onCerrar={() => setEditando(null)}
+            onGuardada={(c) => {
+              guardada(c);
+              setEditando(null);
+              setTab("cotizaciones");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+            onEliminar={(id) => {
+              const c = items.find((i) => i.id === id);
+              if (c) eliminar(c);
+            }}
+            onAdjuntoQuitado={(id) =>
+              setItems((its) => its.map((i) => (i.id === id ? { ...i, adjunto: null } : i)))
+            }
+            onError={manejarError}
+          />
         ) : (
-          <>
-            <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
-              <div className="relative flex-1">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar proyecto, cliente, material o proveedor…" className="bg-background pl-9" />
-              </div>
-              <Button onClick={() => setCreando(true)} className="h-11 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
-                <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
+          <Tabs value={tab} onValueChange={setTab} className="space-y-8">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <TabsList className="grid h-auto w-full max-w-md grid-cols-2 gap-2 rounded-sm bg-secondary/60 p-2">
+                <TabsTrigger
+                  value="cotizaciones"
+                  className="rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                >
+                  <FileText className="mr-2 h-4 w-4" /> Cotizaciones
+                </TabsTrigger>
+                <TabsTrigger
+                  value="materiales"
+                  className="rounded-sm py-2.5 text-xs font-bold uppercase tracking-wide data-[state=active]:bg-accent data-[state=active]:text-accent-foreground"
+                >
+                  <Package className="mr-2 h-4 w-4" /> Buscar material
+                </TabsTrigger>
+              </TabsList>
+              <Button
+                onClick={abrirNueva}
+                className="h-11 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90"
+              >
+                <Plus className="mr-2 h-4 w-4" /> Nueva cotización
               </Button>
             </div>
 
-            {filtrados.length === 0 ? (
-              <div className="rounded-sm border border-dashed border-border bg-card px-6 py-14 text-center">
-                {items.length === 0 ? (
-                  <>
-                    <FolderKanban className="mx-auto mb-3 h-10 w-10 text-accent-foreground/60" />
-                    <p className="font-heading text-lg font-bold text-foreground">Empieza con tu primer proyecto</p>
-                    <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                      Crea el proyecto (ej. “Proyecto CIEC”), sube el PDF de nuestra cotización para sacar las partidas y
-                      ve agregando los precios de cada proveedor.
-                    </p>
-                    <Button onClick={() => setCreando(true)} className="mt-5 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
-                      <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
-                    </Button>
-                  </>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Nada coincide con la búsqueda.</p>
-                )}
+            {loading ? (
+              <div className="py-20 text-center text-muted-foreground">
+                <Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin text-accent-foreground/70" />
+                Cargando…
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {filtrados.map((p) => (
-                  <TarjetaProyecto key={p.id} p={p} onAbrir={() => abrir(p.id)} />
-                ))}
-              </div>
+              <>
+                {/* ═══════════ TAB: COTIZACIONES ═══════════ */}
+                <TabsContent value="cotizaciones" className="mt-0">
+                  <div className="mb-5 grid grid-cols-1 gap-3 md:grid-cols-[1fr_14rem_12rem_auto]">
+                    <div className="relative">
+                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        value={q}
+                        onChange={(e) => setQ(e.target.value)}
+                        placeholder="Buscar por proyecto, proveedor, folio o material…"
+                        className="bg-background pl-9"
+                      />
+                    </div>
+                    <Select value={fProyecto || "__all__"} onValueChange={(v) => setFProyecto(v === "__all__" ? "" : v)}>
+                      <SelectTrigger className="bg-background"><SelectValue placeholder="Todos los proyectos" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todos los proyectos</SelectItem>
+                        {proyectos.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Select value={fEstatus || "__all__"} onValueChange={(v) => setFEstatus(v === "__all__" ? "" : v)}>
+                      <SelectTrigger className="bg-background"><SelectValue placeholder="Todos los estatus" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__all__">Todos los estatus</SelectItem>
+                        {ESTATUS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        copiar(
+                          filtradas.flatMap((c) => c.partidas.map((p) => filaExcel(c, p))),
+                          `${filtradas.length} cotizaciones`,
+                        )
+                      }
+                      className="rounded-sm border-primary font-bold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground"
+                    >
+                      <ClipboardCopy className="mr-2 h-4 w-4" /> Copiar a Excel
+                    </Button>
+                  </div>
+
+                  <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+                    <Stat valor={String(filtradas.length)} etiqueta="Cotizaciones" />
+                    <Stat valor={String(resumen.proveedores)} etiqueta="Proveedores" />
+                    <Stat valor={dinero(resumen.mxn)} etiqueta="Total MXN (con IVA)" />
+                    <Stat valor={dinero(resumen.usd, "USD")} etiqueta="Total USD (con IVA)" />
+                  </div>
+
+                  {filtradas.length === 0 ? (
+                    <div className="rounded-sm border border-dashed border-border bg-card px-5 py-12 text-center text-sm text-muted-foreground">
+                      {items.length === 0 ? (
+                        <>
+                          Aún no hay cotizaciones. Empieza con{" "}
+                          <button type="button" onClick={abrirNueva} className="font-semibold text-foreground underline underline-offset-2">
+                            Nueva cotización
+                          </button>
+                          .
+                        </>
+                      ) : (
+                        "Nada coincide con la búsqueda o los filtros."
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filtradas.map((c) => (
+                        <TarjetaCotizacion
+                          key={c.id}
+                          c={c}
+                          onAbrir={() => abrir(c)}
+                          onAdjunto={() => abrirAdjunto(c)}
+                          onPedirAOtro={() => pedirAOtro(c)}
+                          onEliminar={() => eliminar(c)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </TabsContent>
+
+                {/* ═══════════ TAB: BUSCAR MATERIAL ═══════════ */}
+                <TabsContent value="materiales" className="mt-0">
+                  <BuscadorMateriales
+                    cotizaciones={ordenadas}
+                    q={qMat}
+                    setQ={setQMat}
+                    onAbrir={abrir}
+                    onCopiar={copiar}
+                  />
+                </TabsContent>
+              </>
             )}
-          </>
+          </Tabs>
         )}
       </section>
-
-      <NuevoProyecto abierto={creando} onCerrar={() => setCreando(false)} onCrear={crear} />
     </Layout>
   );
 }
 
-/* ═════════════════════════ Lista ═════════════════════════ */
+/* ═════════════════════════ Componentes ═════════════════════════ */
 
-function TarjetaProyecto({ p, onAbrir }: { p: Proyecto; onAbrir: () => void }) {
-  const t = totalesProyecto(p);
+function Stat({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
-    <button type="button" onClick={onAbrir} className="group rounded-sm border border-border bg-card p-5 text-left transition-colors hover:border-accent/60">
-      <div className="mb-1 flex items-center gap-2">
-        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", p.estatus === "Comprado" ? "bg-emerald-500/15 text-emerald-800" : "bg-accent/20 text-accent-foreground")}>
-          {p.estatus}
-        </span>
-        {p.folio && <span className="font-mono text-xs text-muted-foreground">{p.folio}</span>}
-      </div>
-      <p className="font-heading text-xl font-bold text-foreground">{p.nombre}</p>
-      {p.cliente && <p className="text-sm text-muted-foreground">{p.cliente}</p>}
-      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-3 text-sm">
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Partidas</p>
-          <p className="font-semibold text-foreground">
-            {t.cotizadas}/{t.total} <span className="font-normal text-muted-foreground">cotizadas</span>
-          </p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Venta</p>
-          <p className="font-semibold text-foreground">{dinero(t.venta, p.moneda)}</p>
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Margen</p>
-          <p className={cn("font-heading font-bold", colorMargen(t.margen, p.margenObjetivo))}>{pct(t.margen)}</p>
-        </div>
-      </div>
-    </button>
-  );
-}
-
-function NuevoProyecto({ abierto, onCerrar, onCrear }: { abierto: boolean; onCerrar: () => void; onCrear: (n: string) => Promise<void> }) {
-  const [nombre, setNombre] = useState("");
-  const [enviando, setEnviando] = useState(false);
-  useEffect(() => {
-    if (abierto) setNombre("");
-  }, [abierto]);
-  return (
-    <Dialog open={abierto} onOpenChange={(o) => !o && onCerrar()}>
-      <DialogContent className="rounded-sm">
-        <DialogHeader>
-          <DialogTitle>Nuevo proyecto</DialogTitle>
-          <DialogDescription>Un proyecto ya confirmado que hay que comprar.</DialogDescription>
-        </DialogHeader>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!nombre.trim()) return;
-            setEnviando(true);
-            await onCrear(nombre.trim());
-            setEnviando(false);
-          }}
-          className="space-y-4"
-        >
-          <Input autoFocus placeholder="Ej. Proyecto CIEC" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={onCerrar} className="rounded-sm">Cancelar</Button>
-            <Button type="submit" disabled={!nombre.trim() || enviando} className="rounded-sm bg-accent font-bold uppercase text-accent-foreground hover:bg-accent/90">
-              {enviando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Crear
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-/* ═════════════════════════ Detalle ═════════════════════════ */
-
-type EstadoGuardado = "guardado" | "pendiente" | "guardando" | "error" | "conflicto";
-
-function DetalleProyecto({
-  inicial, onVolver, onCambio, onEliminar, onError,
-}: {
-  inicial: Proyecto;
-  onVolver: () => void;
-  onCambio: (p: Proyecto) => void;
-  onEliminar: () => void;
-  onError: (err: unknown, msg: string) => void;
-}) {
-  const { toast } = useToast();
-  const [p, setP] = useState<Proyecto>(inicial);
-  const [estado, setEstado] = useState<EstadoGuardado>("guardado");
-  const [importando, setImportando] = useState<{ archivo: File; resultado: ResultadoPdf } | null>(null);
-  const [leyendo, setLeyendo] = useState(false);
-  const [subiendo, setSubiendo] = useState(false);
-  const [agregando, setAgregando] = useState(false);
-
-  const pRef = useRef(p);
-  pRef.current = p;
-  const cambios = useRef(0);
-  const guardando = useRef(false);
-
-  function cambiar(fn: (x: Proyecto) => Proyecto) {
-    cambios.current++;
-    setP(fn);
-    setEstado((e) => (e === "conflicto" ? e : "pendiente"));
-  }
-
-  async function guardar() {
-    if (guardando.current) return;
-    guardando.current = true;
-    setEstado("guardando");
-    const n = cambios.current;
-    const enviado = pRef.current;
-    try {
-      const res = await api(`/api/cotizaciones/${enviado.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(enviado),
-      });
-      if (res.status === 409) {
-        setEstado("conflicto");
-        return;
-      }
-      if (!res.ok) throw await errorDe(res, "No se pudo guardar.");
-      const item: Proyecto = (await res.json()).item;
-      setP((cur) => ({ ...cur, version: item.version, archivos: item.archivos, actualizado: item.actualizado }));
-      onCambio({ ...pRef.current, version: item.version, archivos: item.archivos, actualizado: item.actualizado });
-      setEstado(cambios.current === n ? "guardado" : "pendiente");
-    } catch (err) {
-      setEstado("error");
-      onError(err, "No se pudo guardar.");
-    } finally {
-      guardando.current = false;
-    }
-  }
-
-  // Autoguardado: 1 s después del último cambio.
-  useEffect(() => {
-    if (estado !== "pendiente") return;
-    const t = setTimeout(guardar, 1000);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [p, estado]);
-
-  useEffect(() => {
-    const aviso = (e: BeforeUnloadEvent) => {
-      if (estado === "pendiente" || estado === "guardando" || estado === "error") e.preventDefault();
-    };
-    window.addEventListener("beforeunload", aviso);
-    return () => window.removeEventListener("beforeunload", aviso);
-  }, [estado]);
-
-  async function recargar() {
-    try {
-      const res = await api(`/api/cotizaciones/${p.id}`);
-      if (!res.ok) throw await errorDe(res, "No se pudo recargar.");
-      const item: Proyecto = (await res.json()).item;
-      cambios.current++;
-      setP(item);
-      onCambio(item);
-      setEstado("guardado");
-    } catch (err) {
-      onError(err, "No se pudo recargar.");
-    }
-  }
-
-  async function volver() {
-    if (estado === "pendiente" || estado === "error") await guardar();
-    onVolver();
-  }
-
-  const set = (patch: Partial<Proyecto>) => cambiar((x) => ({ ...x, ...patch }));
-  const setPartida = (id: string, fn: (pa: Partida) => Partida) =>
-    cambiar((x) => ({ ...x, partidas: x.partidas.map((pa) => (pa.id === id ? fn(pa) : pa)) }));
-
-  /* ── Archivos ── */
-  async function onSubir(f: File, rol: Archivo["rol"]): Promise<Archivo | null> {
-    const err = validarArchivo(f);
-    if (err) {
-      toast({ title: "Archivo no válido", description: err, variant: "destructive" });
-      return null;
-    }
-    setSubiendo(true);
-    try {
-      const a = await subirArchivo(p.id, f, rol);
-      setP((x) => ({ ...x, archivos: [...x.archivos, a] }));
-      return a;
-    } catch (e) {
-      onError(e, "No se pudo subir el archivo.");
-      return null;
-    } finally {
-      setSubiendo(false);
-    }
-  }
-
-  async function abrirArchivo(a: Archivo) {
-    const w = window.open("", "_blank"); // se abre en el clic para que no la bloquee el navegador
-    try {
-      const url = URL.createObjectURL(await bajarArchivo(p.id, a));
-      if (w) w.location.href = url;
-      else {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = a.nombre;
-        link.click();
-      }
-      setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    } catch (e) {
-      w?.close();
-      onError(e, "No se pudo abrir el archivo.");
-    }
-  }
-
-  async function quitarArchivo(a: Archivo) {
-    if (!window.confirm(`¿Quitar "${a.nombre}"?`)) return;
-    try {
-      const res = await api(`/api/cotizaciones/${p.id}/archivos/${a.id}`, { method: "DELETE" });
-      if (!res.ok && res.status !== 204) throw await errorDe(res, "No se pudo quitar.");
-      setP((x) => ({ ...x, archivos: x.archivos.filter((z) => z.id !== a.id) }));
-      // las ofertas que apuntaban a ese archivo se quedan sin él
-      if (p.partidas.some((pa) => pa.ofertas.some((o) => o.archivoId === a.id))) {
-        cambiar((x) => ({
-          ...x,
-          partidas: x.partidas.map((pa) => ({ ...pa, ofertas: pa.ofertas.map((o) => (o.archivoId === a.id ? { ...o, archivoId: "" } : o)) })),
-        }));
-      }
-    } catch (e) {
-      onError(e, "No se pudo quitar el archivo.");
-    }
-  }
-
-  /* ── Importar nuestra cotización ── */
-  async function elegirPdfNuestro(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (!f) return;
-    if (f.type !== "application/pdf") {
-      toast({ title: "Tiene que ser PDF", description: "Para leer las partidas se necesita el PDF original (no foto).", variant: "destructive" });
-      return;
-    }
-    setLeyendo(true);
-    try {
-      const resultado = await leerPdf(f);
-      setImportando({ archivo: f, resultado });
-    } catch {
-      toast({ title: "No se pudo leer el PDF", description: "Puedes capturar las partidas a mano.", variant: "destructive" });
-    } finally {
-      setLeyendo(false);
-    }
-  }
-
-  async function confirmarImportacion(filas: PartidaLeida[], guardarPdf: boolean, monedaPdf: Moneda) {
-    if (!importando) return;
-    const nuevas: Partida[] = filas.map((f) => ({
-      id: nid(),
-      descripcion: f.descripcion,
-      modelo: f.modelo,
-      cantidad: f.cantidad,
-      unidad: f.unidad,
-      venta: f.precio,
-      costoEst: 0,
-      notas: "",
-      ofertas: [],
-      elegida: "",
-    }));
-    cambiar((x) => ({
-      ...x,
-      moneda: x.partidas.length === 0 ? monedaPdf : x.moneda,
-      partidas: [...x.partidas, ...nuevas],
-    }));
-    const archivo = importando.archivo;
-    setImportando(null);
-    toast({ title: `${nuevas.length} partidas agregadas`, description: "Revisa que cantidades y precios estén bien." });
-    if (guardarPdf) await onSubir(archivo, "nuestra");
-  }
-
-  function agregarPartida(pa: Omit<Partida, "id" | "ofertas" | "elegida">) {
-    cambiar((x) => ({ ...x, partidas: [...x.partidas, { ...pa, id: nid(), ofertas: [], elegida: "" }] }));
-    setAgregando(false);
-  }
-
-  function copiar(texto: string, titulo: string) {
-    navigator.clipboard?.writeText(texto).then(
-      () => toast({ title: titulo }),
-      () => toast({ title: "Error al copiar", variant: "destructive" }),
-    );
-  }
-
-  const t = totalesProyecto(p);
-  const necesitaTC = p.partidas.some((pa) => pa.ofertas.some((o) => o.moneda !== p.moneda)) && !p.tipoCambio;
-  const nuestras = p.archivos.filter((a) => a.rol === "nuestra");
-  const deProveedores = p.archivos.filter((a) => a.rol === "proveedor");
-
-  return (
-    <div className="space-y-6">
-      {/* barra superior */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <button type="button" onClick={volver} className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-3.5 w-3.5" /> Todos los proyectos
-        </button>
-        <IndicadorGuardado estado={estado} onReintentar={guardar} />
-      </div>
-
-      {estado === "conflicto" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-sm border border-amber-500/50 bg-amber-500/10 px-4 py-3 text-sm text-amber-900">
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" /> Otra persona guardó cambios en este proyecto. Recarga para ver la versión más reciente (tus últimos cambios no se guardaron).
-          </span>
-          <Button size="sm" variant="outline" onClick={recargar} className="rounded-sm border-amber-600/50">
-            <RefreshCcw className="mr-2 h-4 w-4" /> Recargar
-          </Button>
-        </div>
-      )}
-
-      {/* datos del proyecto */}
-      <div className="rounded-sm border border-border bg-card p-5 shadow-sm md:p-6">
-        <Input
-          value={p.nombre}
-          onChange={(e) => set({ nombre: e.target.value })}
-          aria-label="Nombre del proyecto"
-          className="mb-4 h-auto border-0 bg-transparent px-0 font-heading text-2xl font-bold shadow-none focus-visible:ring-0 md:text-3xl"
-        />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
-          <Campo label="Cliente" className="col-span-2">
-            <Input value={p.cliente} onChange={(e) => set({ cliente: e.target.value })} placeholder="Opcional" />
-          </Campo>
-          <Campo label="Folio de nuestra cotización">
-            <Input value={p.folio} onChange={(e) => set({ folio: e.target.value })} placeholder="Ej. AV-118" />
-          </Campo>
-          <Campo label="Moneda de venta">
-            <Select value={p.moneda} onValueChange={(v) => set({ moneda: v as Moneda })}>
-              <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="MXN">MXN</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-              </SelectContent>
-            </Select>
-          </Campo>
-          <Campo label="Tipo de cambio USD">
-            <Input
-              inputMode="decimal"
-              value={p.tipoCambio ? String(p.tipoCambio) : ""}
-              onChange={(e) => set({ tipoCambio: aNumero(e.target.value) })}
-              placeholder="Ej. 18.50"
-              className={cn(necesitaTC && "border-amber-500 ring-1 ring-amber-500")}
-            />
-          </Campo>
-          <Campo label="Margen objetivo %">
-            <Input inputMode="decimal" value={String(p.margenObjetivo)} onChange={(e) => set({ margenObjetivo: aNumero(e.target.value) })} />
-          </Campo>
-        </div>
-        {necesitaTC && (
-          <p className="mt-2 text-xs font-semibold text-amber-700">
-            Hay precios en otra moneda: pon el tipo de cambio para poder compararlos.
-          </p>
-        )}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Select value={p.estatus} onValueChange={(v) => set({ estatus: v as Proyecto["estatus"] })}>
-            <SelectTrigger className="h-9 w-40 bg-background"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Cotizando">Cotizando</SelectItem>
-              <SelectItem value="Comprado">Comprado</SelectItem>
-            </SelectContent>
-          </Select>
-          <span className="text-xs text-muted-foreground">Precios unitarios sin IVA en todo el proyecto.</span>
-        </div>
-      </div>
-
-      {/* resumen */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Kpi etiqueta="Venta (nuestra cotización)" valor={dinero(t.venta, p.moneda)} />
-        <Kpi etiqueta="Costo con proveedores" valor={dinero(t.costo, p.moneda)} nota={`${t.cotizadas} de ${t.total} partidas cotizadas`} />
-        <Kpi etiqueta="Utilidad" valor={dinero(t.utilidad, p.moneda)} clase={colorMargen(t.margen, p.margenObjetivo)} nota="de las partidas cotizadas" />
-        <Kpi etiqueta="Margen" valor={pct(t.margen)} clase={colorMargen(t.margen, p.margenObjetivo)} nota={`objetivo ${p.margenObjetivo}%`} />
-      </div>
-
-      {/* acciones */}
-      <div className="flex flex-wrap gap-2">
-        <label className={cn("inline-flex h-10 cursor-pointer items-center rounded-sm bg-primary px-4 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90", leyendo && "pointer-events-none opacity-60")}>
-          {leyendo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-          {leyendo ? "Leyendo PDF…" : "Importar partidas de PDF"}
-          <input type="file" accept="application/pdf" className="hidden" onChange={elegirPdfNuestro} />
-        </label>
-        <Button variant="outline" onClick={() => setAgregando(true)} className="h-10 rounded-sm">
-          <Plus className="mr-2 h-4 w-4" /> Partida a mano
-        </Button>
-        <div className="flex flex-wrap gap-2 md:ml-auto">
-          <Button variant="outline" onClick={() => copiar(resumenTexto(p), "Resumen copiado — pégalo en el grupo")} className="h-10 rounded-sm" disabled={p.partidas.length === 0}>
-            <ClipboardCopy className="mr-2 h-4 w-4" /> Copiar resumen
-          </Button>
-          <Button asChild className="h-10 rounded-sm bg-[#25D366] font-semibold text-white hover:bg-[#1ebe5b]">
-            <a href={`https://wa.me/?text=${encodeURIComponent(resumenTexto(p))}`} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
-            </a>
-          </Button>
-          <Button variant="outline" onClick={() => copiar(tablaExcel(p), "Tabla copiada — pégala en Excel (celda A1)")} className="h-10 rounded-sm" disabled={p.partidas.length === 0}>
-            <ClipboardCopy className="mr-2 h-4 w-4" /> Copiar a Excel
-          </Button>
-        </div>
-      </div>
-
-      {agregando && <FormPartida onGuardar={agregarPartida} onCancelar={() => setAgregando(false)} moneda={p.moneda} />}
-
-      {/* partidas */}
-      {p.partidas.length === 0 && !agregando ? (
-        <div className="rounded-sm border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-          <FileText className="mx-auto mb-3 h-9 w-9 text-accent-foreground/60" />
-          Sube el PDF de <strong className="text-foreground">nuestra cotización</strong> con “Importar partidas de PDF” para
-          sacar las partidas y precios de venta automáticamente, o agrégalas a mano.
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {p.partidas.map((pa, i) => (
-            <TarjetaPartida
-              key={pa.id}
-              n={i + 1}
-              pa={pa}
-              p={p}
-              archivosProv={deProveedores}
-              onCambiar={(fn) => setPartida(pa.id, fn)}
-              onQuitar={() => {
-                if (pa.ofertas.length > 0 && !window.confirm("Esta partida tiene ofertas de proveedores. ¿Quitarla de todos modos?")) return;
-                cambiar((x) => ({ ...x, partidas: x.partidas.filter((z) => z.id !== pa.id) }));
-              }}
-              onSubir={(f) => onSubir(f, "proveedor")}
-              onAbrirArchivo={abrirArchivo}
-              subiendo={subiendo}
-            />
-          ))}
-        </div>
-      )}
-
-      {/* archivos y notas */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-sm border border-border bg-card p-5">
-          <h3 className="mb-3 font-heading text-sm font-bold uppercase tracking-widest text-foreground">Archivos</h3>
-          {p.archivos.length === 0 && <p className="mb-3 text-sm text-muted-foreground">Aún no hay archivos.</p>}
-          {[["Nuestra cotización", nuestras], ["De proveedores", deProveedores]].map(([titulo, lista]) =>
-            (lista as Archivo[]).length > 0 ? (
-              <div key={titulo as string} className="mb-3">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{titulo as string}</p>
-                <ul className="space-y-1">
-                  {(lista as Archivo[]).map((a) => (
-                    <li key={a.id} className="flex items-center justify-between gap-2 rounded-sm bg-secondary/40 px-3 py-1.5 text-sm">
-                      <button type="button" onClick={() => abrirArchivo(a)} className="flex min-w-0 items-center gap-2 text-left hover:underline">
-                        <Paperclip className="h-3.5 w-3.5 shrink-0" />
-                        <span className="truncate">{a.nombre}</span>
-                      </button>
-                      <button type="button" onClick={() => quitarArchivo(a)} aria-label={`Quitar ${a.nombre}`} className="shrink-0 text-muted-foreground hover:text-destructive">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ) : null,
-          )}
-          <div className="flex flex-wrap gap-2">
-            {(["nuestra", "proveedor"] as const).map((rol) => (
-              <label key={rol} className={cn("inline-flex cursor-pointer items-center rounded-sm border border-dashed border-accent/60 px-3 py-2 text-xs font-semibold hover:bg-accent/10", subiendo && "pointer-events-none opacity-60")}>
-                <Paperclip className="mr-1.5 h-3.5 w-3.5" />
-                {rol === "nuestra" ? "Subir nuestra cotización" : "Subir de proveedor"}
-                <input
-                  type="file"
-                  accept="application/pdf,image/jpeg,image/png,image/webp"
-                  className="hidden"
-                  onChange={(e) => {
-                    const f = e.target.files?.[0];
-                    e.target.value = "";
-                    if (f) onSubir(f, rol);
-                  }}
-                />
-              </label>
-            ))}
-          </div>
-        </div>
-        <div className="rounded-sm border border-border bg-card p-5">
-          <h3 className="mb-3 font-heading text-sm font-bold uppercase tracking-widest text-foreground">Notas del proyecto</h3>
-          <Textarea rows={6} value={p.notas} onChange={(e) => set({ notas: e.target.value })} placeholder="Fechas de entrega a obra, acuerdos con el cliente, pendientes…" />
-        </div>
-      </div>
-
-      <div className="flex justify-end">
-        <Button variant="outline" size="sm" onClick={onEliminar} className="rounded-sm border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive">
-          <Trash2 className="mr-2 h-4 w-4" /> Eliminar proyecto
-        </Button>
-      </div>
-
-      {importando && (
-        <DialogoImportar
-          resultado={importando.resultado}
-          nombreArchivo={importando.archivo.name}
-          onCancelar={() => setImportando(null)}
-          onConfirmar={confirmarImportacion}
-        />
-      )}
+    <div className="rounded-sm border border-border bg-card p-4">
+      <div className="truncate font-heading text-xl font-bold text-foreground md:text-2xl">{valor}</div>
+      <div className="mt-1 text-[11px] uppercase tracking-wider text-muted-foreground">{etiqueta}</div>
     </div>
   );
 }
 
-function IndicadorGuardado({ estado, onReintentar }: { estado: EstadoGuardado; onReintentar: () => void }) {
-  if (estado === "guardado")
-    return (
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-700">
-        <CheckCircle2 className="h-4 w-4" /> Guardado
-      </span>
-    );
-  if (estado === "error")
-    return (
-      <button type="button" onClick={onReintentar} className="inline-flex items-center gap-1.5 text-xs font-semibold text-destructive underline">
-        <AlertTriangle className="h-4 w-4" /> No se guardó — reintentar
-      </button>
-    );
-  if (estado === "conflicto") return null;
+function ChipEstatus({ estatus }: { estatus: Estatus }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-      <Loader2 className="h-4 w-4 animate-spin" /> Guardando…
+    <span className={cn("inline-block rounded-full px-2.5 py-0.5 text-xs font-bold", ESTILO_ESTATUS[estatus])}>
+      {estatus}
     </span>
   );
 }
 
-function Kpi({ etiqueta, valor, nota, clase }: { etiqueta: string; valor: string; nota?: string; clase?: string }) {
+function TarjetaCotizacion({
+  c, onAbrir, onAdjunto, onPedirAOtro, onEliminar,
+}: {
+  c: Cotizacion;
+  onAbrir: () => void;
+  onAdjunto: () => void;
+  onPedirAOtro: () => void;
+  onEliminar: () => void;
+}) {
+  const { total } = totales(c.partidas, c.iva);
+  const resumen = c.partidas
+    .slice(0, 3)
+    .map((p) => p.descripcion)
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div className="rounded-sm border border-border bg-card p-4">
-      <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{etiqueta}</div>
-      <div className={cn("mt-1 truncate font-heading text-xl font-bold text-foreground md:text-2xl", clase)}>{valor}</div>
-      {nota && <div className="mt-0.5 text-xs text-muted-foreground">{nota}</div>}
+    <div className="group rounded-sm border border-border bg-card transition-colors hover:border-accent/50">
+      <button type="button" onClick={onAbrir} className="block w-full p-4 text-left md:p-5">
+        <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
+          <div className="min-w-0">
+            <div className="mb-1 flex flex-wrap items-center gap-2">
+              <span className="font-mono text-xs font-bold text-muted-foreground">{c.folio}</span>
+              <ChipEstatus estatus={c.estatus} />
+              {vencida(c) && (
+                <span className="rounded-full bg-orange-500/15 px-2.5 py-0.5 text-xs font-bold text-orange-800">Vencida</span>
+              )}
+            </div>
+            <p className="font-heading text-lg font-bold text-foreground">
+              {c.proveedor || "Proveedor sin nombre"}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {[c.proyecto, c.cliente, fechaCorta(c.fecha)].filter(Boolean).join(" · ")}
+            </p>
+          </div>
+          <div className="sm:text-right">
+            <p className="whitespace-nowrap font-heading text-lg font-bold text-primary">{dinero(total, c.moneda)}</p>
+            <p className="text-xs text-muted-foreground">
+              {c.partidas.length} {c.partidas.length === 1 ? "partida" : "partidas"}
+              {c.iva ? " · IVA incl." : " · sin IVA"}
+            </p>
+          </div>
+        </div>
+        {resumen && (
+          <p className="mt-2 line-clamp-1 text-sm text-muted-foreground">
+            {resumen}
+            {c.partidas.length > 3 ? " …" : ""}
+          </p>
+        )}
+      </button>
+      <div className="flex flex-wrap items-center gap-1 border-t border-border px-3 py-2">
+        {c.adjunto && (
+          <AccionChica onClick={onAdjunto} icon={<Paperclip className="h-3.5 w-3.5" />}>
+            Ver archivo
+          </AccionChica>
+        )}
+        <AccionChica onClick={onAbrir} icon={<PencilLine className="h-3.5 w-3.5" />}>
+          Editar
+        </AccionChica>
+        <AccionChica onClick={onPedirAOtro} icon={<Copy className="h-3.5 w-3.5" />}>
+          Pedir a otro proveedor
+        </AccionChica>
+        <AccionChica onClick={onEliminar} icon={<Trash2 className="h-3.5 w-3.5" />} peligro>
+          Eliminar
+        </AccionChica>
+      </div>
     </div>
   );
 }
 
-function Campo({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function AccionChica({
+  onClick, icon, children, peligro,
+}: {
+  onClick: () => void;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  peligro?: boolean;
+}) {
   return (
-    <div className={cn("space-y-1.5", className)}>
-      <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-sm px-2.5 py-1.5 text-xs font-semibold transition-colors",
+        peligro
+          ? "text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+          : "text-muted-foreground hover:bg-secondary hover:text-foreground",
+      )}
+    >
+      {icon}
+      {children}
+    </button>
+  );
+}
+
+/* ───────────── Buscador de materiales ───────────── */
+
+function BuscadorMateriales({
+  cotizaciones, q, setQ, onAbrir, onCopiar,
+}: {
+  cotizaciones: Cotizacion[];
+  q: string;
+  setQ: (s: string) => void;
+  onAbrir: (c: Cotizacion) => void;
+  onCopiar: (filas: string[][], cuantas: string) => void;
+}) {
+  const filas = useMemo(() => {
+    const todas = cotizaciones.flatMap((c) => c.partidas.map((p) => ({ c, p, clave: normalizar(p.descripcion) })));
+    const hallados = q.trim()
+      ? todas.filter(({ c, p }) => coincide(`${p.descripcion} ${p.marca} ${c.proveedor} ${c.proyecto}`, q))
+      : todas;
+    // Más barato por material: mismo texto de descripción y misma moneda, al menos 2 precios.
+    const minimos = new Map<string, number>();
+    const cuenta = new Map<string, number>();
+    hallados.forEach(({ c, p, clave }) => {
+      if (!p.precio) return;
+      const k = `${clave}|${c.moneda}`;
+      cuenta.set(k, (cuenta.get(k) || 0) + 1);
+      minimos.set(k, Math.min(minimos.get(k) ?? Infinity, p.precio));
+    });
+    return hallados
+      .map((f) => {
+        const k = `${f.clave}|${f.c.moneda}`;
+        return { ...f, masBarato: (cuenta.get(k) || 0) > 1 && f.p.precio === minimos.get(k) };
+      })
+      .sort((a, b) =>
+        q.trim()
+          ? a.clave.localeCompare(b.clave) || a.p.precio - b.p.precio
+          : (b.c.fecha || "").localeCompare(a.c.fecha || ""),
+      );
+  }, [cotizaciones, q]);
+
+  const visibles = filas.slice(0, 300);
+
+  return (
+    <div>
+      <div className="mb-5 flex flex-col gap-3 md:flex-row">
+        <div className="relative flex-1">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            autoFocus
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Ej. tubo cobre 3/4, manejadora, cable 12 AWG…"
+            className="bg-background pl-9"
+          />
+        </div>
+        <Button
+          variant="outline"
+          onClick={() => onCopiar(filas.map(({ c, p }) => filaExcel(c, p)), `${filas.length} materiales`)}
+          className="rounded-sm border-primary font-bold uppercase tracking-wide text-primary hover:bg-primary hover:text-primary-foreground"
+        >
+          <ClipboardCopy className="mr-2 h-4 w-4" /> Copiar a Excel
+        </Button>
+      </div>
+
+      <p className="mb-3 text-sm text-muted-foreground">
+        {filas.length === 0
+          ? q.trim()
+            ? "Ningún material coincide."
+            : "Aún no hay materiales cotizados."
+          : `${filas.length} ${filas.length === 1 ? "precio encontrado" : "precios encontrados"}${
+              filas.length > visibles.length ? ` (mostrando ${visibles.length})` : ""
+            }. Toca uno para abrir su cotización.`}
+      </p>
+
+      {visibles.length > 0 && (
+        <div className="overflow-hidden rounded-sm border border-border bg-card">
+          {/* encabezado (solo escritorio) */}
+          <div className="hidden grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1.1fr)_6rem_5.5rem_8rem] gap-3 border-b border-border bg-secondary/50 px-4 py-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground md:grid">
+            <span>Material</span>
+            <span>Proveedor</span>
+            <span>Proyecto</span>
+            <span>Fecha</span>
+            <span className="text-right">Cant.</span>
+            <span className="text-right">Precio unit.</span>
+          </div>
+          {visibles.map(({ c, p, masBarato }, i) => (
+            <button
+              key={`${c.id}-${i}`}
+              type="button"
+              onClick={() => onAbrir(c)}
+              className={cn(
+                "grid w-full grid-cols-2 gap-x-3 gap-y-1 border-b border-border px-4 py-3 text-left text-sm transition-colors last:border-b-0 hover:bg-secondary/40 md:grid-cols-[minmax(0,2.4fr)_minmax(0,1.3fr)_minmax(0,1.1fr)_6rem_5.5rem_8rem] md:items-center",
+                masBarato && "bg-emerald-500/5",
+              )}
+            >
+              <span className="col-span-2 min-w-0 md:col-span-1">
+                <span className="block font-semibold text-foreground">{p.descripcion || "—"}</span>
+                {p.marca && <span className="block text-xs text-muted-foreground">{p.marca}</span>}
+              </span>
+              <span className="min-w-0 truncate text-muted-foreground">
+                {c.proveedor || "—"} <span className="md:hidden">· {c.estatus}</span>
+              </span>
+              <span className="min-w-0 truncate text-right text-muted-foreground md:text-left">{c.proyecto || "—"}</span>
+              <span className="text-muted-foreground">{fechaCorta(c.fecha)}</span>
+              <span className="text-right text-muted-foreground">
+                {p.cantidad} {p.unidad}
+              </span>
+              <span className="col-span-2 text-right md:col-span-1">
+                <span className="block font-heading font-bold text-primary">{dinero(p.precio, c.moneda)}</span>
+                {masBarato && (
+                  <span className="mt-0.5 inline-block whitespace-nowrap rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">
+                    Más barato
+                  </span>
+                )}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+      <p className="mt-4 text-xs text-muted-foreground">
+        “Más barato” compara partidas con la misma descripción y moneda. Escribe los materiales igual en
+        todas las cotizaciones para que se comparen.
+      </p>
+    </div>
+  );
+}
+
+/* ───────────── Editor ───────────── */
+
+function Editor({
+  inicial, onCerrar, onGuardada, onEliminar, onAdjuntoQuitado, onError,
+}: {
+  inicial: Draft;
+  onCerrar: () => void;
+  onGuardada: (c: Cotizacion) => void;
+  onEliminar: (id: string) => void;
+  onAdjuntoQuitado: (id: string) => void;
+  onError: (err: unknown, msg: string) => void;
+}) {
+  const { toast } = useToast();
+  const [d, setD] = useState<Draft>(inicial);
+  const [archivo, setArchivo] = useState<File | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [quitando, setQuitando] = useState(false);
+  const [error, setError] = useState("");
+  const [sucio, setSucio] = useState(false);
+
+  const set = (patch: Partial<Draft>) => {
+    setD((x) => ({ ...x, ...patch }));
+    setSucio(true);
+  };
+  const setPartida = (u: string, patch: Partial<PartidaDraft>) => {
+    setD((x) => ({ ...x, partidas: x.partidas.map((p) => (p.uid === u ? { ...p, ...patch } : p)) }));
+    setSucio(true);
+  };
+  const agregarPartida = () => {
+    setD((x) => ({
+      ...x,
+      partidas: [...x.partidas, { uid: uid(), descripcion: "", marca: "", cantidad: "1", unidad: "pza", precio: "" }],
+    }));
+    setSucio(true);
+  };
+  const quitarPartida = (u: string) => {
+    setD((x) => ({ ...x, partidas: x.partidas.filter((p) => p.uid !== u) }));
+    setSucio(true);
+  };
+
+  const t = totales(
+    d.partidas.map((p) => ({ cantidad: aNumero(p.cantidad), precio: aNumero(p.precio) })),
+    d.iva,
+  );
+
+  function cerrar() {
+    if ((sucio || archivo) && !window.confirm("Tienes cambios sin guardar. ¿Salir de todos modos?")) return;
+    onCerrar();
+    window.scrollTo({ top: 0 });
+  }
+
+  function elegirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f) return;
+    const ok = f.type === "application/pdf" || /^image\/(jpeg|png|webp)$/.test(f.type);
+    if (!ok) {
+      toast({ title: "Formato no válido", description: "Sube un PDF o una foto (JPG, PNG).", variant: "destructive" });
+      return;
+    }
+    if (f.type === "application/pdf" && f.size > MAX_ADJUNTO) {
+      toast({ title: "PDF muy pesado", description: "Máximo 4 MB.", variant: "destructive" });
+      return;
+    }
+    setArchivo(f);
+  }
+
+  async function subirAdjunto(id: string, f: File): Promise<Adjunto> {
+    const blob = await prepararArchivo(f);
+    if (blob.size > MAX_ADJUNTO) throw new Error("El archivo pesa más de 4 MB.");
+    const tipo = blob.type || f.type;
+    const nombre = tipo === "image/jpeg" && f.type !== "image/jpeg" ? f.name.replace(/\.\w+$/, ".jpg") : f.name;
+    const res = await api(`/api/cotizaciones/${encodeURIComponent(id)}/adjunto`, {
+      method: "PUT",
+      headers: { "Content-Type": tipo, "X-File-Name": encodeURIComponent(nombre) },
+      body: blob,
+    });
+    if (!res.ok) throw await errorDe(res, "No se pudo subir el archivo.");
+    return (await res.json()).adjunto;
+  }
+
+  async function guardar() {
+    setError("");
+    if (!d.proyecto.trim() && !d.proveedor.trim()) {
+      setError("Captura al menos el proyecto o el proveedor.");
+      return;
+    }
+    setGuardando(true);
+    try {
+      const { id: _id, folio: _f, adjunto: _a, partidas, ...campos } = d;
+      const body = {
+        ...campos,
+        partidas: partidas.map((p) => ({
+          descripcion: p.descripcion,
+          marca: p.marca,
+          cantidad: aNumero(p.cantidad),
+          unidad: p.unidad,
+          precio: aNumero(p.precio),
+        })),
+      };
+      const res = await api(d.id ? `/api/cotizaciones/${encodeURIComponent(d.id)}` : "/api/cotizaciones", {
+        method: d.id ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw await errorDe(res, "No se pudo guardar.");
+      let item: Cotizacion = (await res.json()).item;
+
+      if (archivo) {
+        try {
+          item = { ...item, adjunto: await subirAdjunto(item.id, archivo) };
+        } catch (err) {
+          // La cotización sí quedó guardada: se avisa y se puede reintentar el archivo.
+          onGuardada(item);
+          onError(err, "La cotización se guardó, pero el archivo no se pudo subir.");
+          return;
+        }
+      }
+      toast({ title: d.id ? `${item.folio} actualizada` : `${item.folio} guardada` });
+      onGuardada(item);
+    } catch (err) {
+      if (err instanceof SesionExpirada) onError(err, "");
+      else setError(err instanceof Error ? err.message : "No se pudo guardar.");
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function quitarAdjunto() {
+    if (!d.id || !window.confirm("¿Quitar el archivo de esta cotización?")) return;
+    setQuitando(true);
+    try {
+      const res = await api(`/api/cotizaciones/${encodeURIComponent(d.id)}/adjunto`, { method: "DELETE" });
+      if (!res.ok && res.status !== 204) throw await errorDe(res, "No se pudo quitar el archivo.");
+      setD((x) => ({ ...x, adjunto: null }));
+      onAdjuntoQuitado(d.id);
+    } catch (err) {
+      onError(err, "No se pudo quitar el archivo.");
+    } finally {
+      setQuitando(false);
+    }
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <button
+          type="button"
+          onClick={cerrar}
+          className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> Volver a la lista
+        </button>
+        <h2 className="font-heading text-2xl font-bold text-foreground">
+          {d.folio ? d.folio : "Nueva cotización"}
+        </h2>
+      </div>
+
+      {error && (
+        <div className="rounded-sm border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>
+      )}
+
+      {/* Datos generales */}
+      <Bloque titulo="Proyecto y proveedor">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Campo label="Proyecto / PO">
+            <Input list="dl-proyectos" placeholder="Ej. PO-018 Nave Bombardier" value={d.proyecto} onChange={(e) => set({ proyecto: e.target.value })} />
+          </Campo>
+          <Campo label="Cliente">
+            <Input list="dl-clientes" placeholder="Opcional" value={d.cliente} onChange={(e) => set({ cliente: e.target.value })} />
+          </Campo>
+          <Campo label="Estatus">
+            <Select value={d.estatus} onValueChange={(v) => set({ estatus: v as Estatus })}>
+              <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ESTATUS.map((e) => <SelectItem key={e} value={e}>{e}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </Campo>
+          <Campo label="Proveedor">
+            <Input list="dl-proveedores" placeholder="Ej. Grainger" value={d.proveedor} onChange={(e) => set({ proveedor: e.target.value })} />
+          </Campo>
+          <Campo label="Contacto">
+            <Input placeholder="Nombre del vendedor" value={d.contacto} onChange={(e) => set({ contacto: e.target.value })} />
+          </Campo>
+          <Campo label="Folio del proveedor">
+            <Input placeholder="Núm. de su cotización" value={d.folioProveedor} onChange={(e) => set({ folioProveedor: e.target.value })} />
+          </Campo>
+          <Campo label="Teléfono">
+            <Input type="tel" value={d.telefono} onChange={(e) => set({ telefono: e.target.value })} />
+          </Campo>
+          <Campo label="Correo">
+            <Input type="email" value={d.correo} onChange={(e) => set({ correo: e.target.value })} />
+          </Campo>
+          <Campo label="Fecha de la cotización">
+            <Input type="date" value={d.fecha} onChange={(e) => set({ fecha: e.target.value })} />
+          </Campo>
+          <Campo label="Vigente hasta">
+            <Input type="date" value={d.vigencia} onChange={(e) => set({ vigencia: e.target.value })} />
+          </Campo>
+          <Campo label="Tiempo de entrega">
+            <Input placeholder="Ej. 3 semanas" value={d.entrega} onChange={(e) => set({ entrega: e.target.value })} />
+          </Campo>
+          <Campo label="Condiciones de pago">
+            <Input placeholder="Ej. 50% anticipo, crédito 30 días" value={d.condicionesPago} onChange={(e) => set({ condicionesPago: e.target.value })} />
+          </Campo>
+        </div>
+      </Bloque>
+
+      {/* Partidas */}
+      <Bloque
+        titulo="Materiales y equipos"
+        extra={
+          <div className="flex items-center gap-4">
+            <div className="w-28">
+              <Select value={d.moneda} onValueChange={(v) => set({ moneda: v as Moneda })}>
+                <SelectTrigger className="h-9 bg-background"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="MXN">MXN</SelectItem>
+                  <SelectItem value="USD">USD</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        }
+      >
+        <div className="hidden grid-cols-[minmax(0,3fr)_minmax(0,1.6fr)_5.5rem_6rem_8rem_8rem_2.25rem] gap-2 pb-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground md:grid">
+          <span>Descripción</span>
+          <span>Marca / modelo</span>
+          <span>Cantidad</span>
+          <span>Unidad</span>
+          <span>Precio unit.</span>
+          <span className="text-right">Importe</span>
+          <span />
+        </div>
+        <div className="space-y-3 md:space-y-2">
+          {d.partidas.map((p, i) => (
+            <div
+              key={p.uid}
+              className="grid grid-cols-2 gap-2 rounded-sm border border-border p-3 md:grid-cols-[minmax(0,3fr)_minmax(0,1.6fr)_5.5rem_6rem_8rem_8rem_2.25rem] md:items-center md:border-0 md:p-0"
+            >
+              <Input
+                aria-label={`Descripción partida ${i + 1}`}
+                placeholder="Descripción"
+                value={p.descripcion}
+                onChange={(e) => setPartida(p.uid, { descripcion: e.target.value })}
+                className="col-span-2 md:col-span-1"
+              />
+              <Input
+                aria-label="Marca o modelo"
+                placeholder="Marca / modelo"
+                value={p.marca}
+                onChange={(e) => setPartida(p.uid, { marca: e.target.value })}
+                className="col-span-2 md:col-span-1"
+              />
+              <Input
+                aria-label="Cantidad"
+                placeholder="Cant."
+                inputMode="decimal"
+                value={p.cantidad}
+                onChange={(e) => setPartida(p.uid, { cantidad: e.target.value })}
+              />
+              <Input
+                aria-label="Unidad"
+                list="dl-unidades"
+                placeholder="Unidad"
+                value={p.unidad}
+                onChange={(e) => setPartida(p.uid, { unidad: e.target.value })}
+              />
+              <Input
+                aria-label="Precio unitario"
+                placeholder="P. unitario"
+                inputMode="decimal"
+                value={p.precio}
+                onChange={(e) => setPartida(p.uid, { precio: e.target.value })}
+              />
+              <span className="flex items-center justify-end font-heading text-sm font-bold text-foreground">
+                {dinero(aNumero(p.cantidad) * aNumero(p.precio), d.moneda)}
+              </span>
+              <button
+                type="button"
+                aria-label="Quitar partida"
+                onClick={() => quitarPartida(p.uid)}
+                className="col-span-2 inline-flex h-9 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive md:col-span-1"
+              >
+                <X className="h-4 w-4" />
+                <span className="ml-1 text-xs md:hidden">Quitar</span>
+              </button>
+            </div>
+          ))}
+        </div>
+        <Button type="button" variant="outline" size="sm" onClick={agregarPartida} className="mt-3 rounded-sm">
+          <Plus className="mr-1.5 h-4 w-4" /> Agregar partida
+        </Button>
+
+        <div className="mt-6 flex flex-col items-end gap-1 border-t border-border pt-4 text-sm">
+          <label className="mb-2 flex items-center gap-2 text-muted-foreground">
+            <Switch checked={d.iva} onCheckedChange={(v) => set({ iva: v })} />
+            Agregar IVA 16% (los precios unitarios son sin IVA)
+          </label>
+          <div className="flex w-full max-w-xs justify-between text-muted-foreground">
+            <span>Subtotal</span>
+            <span>{dinero(t.subtotal, d.moneda)}</span>
+          </div>
+          {d.iva && (
+            <div className="flex w-full max-w-xs justify-between text-muted-foreground">
+              <span>IVA 16%</span>
+              <span>{dinero(t.impuesto, d.moneda)}</span>
+            </div>
+          )}
+          <div className="flex w-full max-w-xs justify-between font-heading text-lg font-bold text-foreground">
+            <span>Total</span>
+            <span>{dinero(t.total, d.moneda)}</span>
+          </div>
+        </div>
+      </Bloque>
+
+      {/* Archivo y notas */}
+      <Bloque titulo="Archivo del proveedor y notas">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>PDF o foto de la cotización</Label>
+            {d.adjunto && !archivo && (
+              <div className="flex items-center justify-between gap-3 rounded-sm border border-border bg-secondary/40 px-3 py-2 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <Paperclip className="h-4 w-4 shrink-0 text-accent-foreground/70" />
+                  <span className="truncate">{d.adjunto.nombre}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">{(d.adjunto.tamano / 1024 / 1024).toFixed(1)} MB</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={quitando}
+                  onClick={quitarAdjunto}
+                  className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-destructive"
+                >
+                  {quitando ? "Quitando…" : "Quitar"}
+                </button>
+              </div>
+            )}
+            {archivo && (
+              <div className="flex items-center justify-between gap-3 rounded-sm border border-accent/50 bg-accent/10 px-3 py-2 text-sm">
+                <span className="flex min-w-0 items-center gap-2">
+                  <Paperclip className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{archivo.name}</span>
+                  <span className="shrink-0 text-xs text-muted-foreground">se sube al guardar</span>
+                </span>
+                <button type="button" onClick={() => setArchivo(null)} className="shrink-0 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                  Cancelar
+                </button>
+              </div>
+            )}
+            <label className="block cursor-pointer rounded-sm border-2 border-dashed border-accent/50 bg-accent/5 px-4 py-6 text-center text-sm transition-colors hover:bg-accent/10">
+              <Paperclip className="mx-auto mb-1.5 h-6 w-6 text-accent-foreground/70" />
+              <span className="font-semibold text-foreground">
+                {d.adjunto || archivo ? "Reemplazar archivo" : "Adjuntar PDF o foto"}
+              </span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">Máximo 4 MB</span>
+              <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={elegirArchivo} />
+            </label>
+          </div>
+          <Campo label="Notas">
+            <Textarea
+              rows={7}
+              placeholder="Alcance, exclusiones, flete, garantía, lo que haya que recordar…"
+              value={d.notas}
+              onChange={(e) => set({ notas: e.target.value })}
+            />
+          </Campo>
+        </div>
+      </Bloque>
+
+      {d.id && (
+        <div className="flex justify-end">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onEliminar(d.id!)}
+            className="rounded-sm border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            <Trash2 className="mr-2 h-4 w-4" /> Eliminar esta cotización
+          </Button>
+        </div>
+      )}
+
+      {/* Acciones (pr-20 en móvil: deja libre el botón flotante de WhatsApp) */}
+      <div className="sticky bottom-0 z-10 -mx-4 flex items-center gap-2 border-t border-border bg-background/95 py-3 pl-4 pr-20 backdrop-blur sm:pr-4">
+        <Button
+          onClick={guardar}
+          disabled={guardando}
+          className="h-11 flex-1 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90 sm:flex-none"
+        >
+          {guardando ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+          {guardando ? "Guardando…" : "Guardar"}
+        </Button>
+        <Button variant="outline" onClick={cerrar} className="h-11 flex-1 rounded-sm sm:flex-none">
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function Bloque({ titulo, extra, children }: { titulo: string; extra?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <div className="rounded-sm border border-border bg-card p-5 shadow-sm md:p-6">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="font-heading text-sm font-bold uppercase tracking-widest text-foreground">{titulo}</h3>
+        {extra}
+      </div>
       {children}
     </div>
   );
 }
 
-/* ───────────── Partida ───────────── */
-
-function FormPartida({
-  inicial, moneda, onGuardar, onCancelar,
-}: {
-  inicial?: Partida;
-  moneda: Moneda;
-  onGuardar: (pa: Omit<Partida, "id" | "ofertas" | "elegida">) => void;
-  onCancelar: () => void;
-}) {
-  const [f, setF] = useState({
-    descripcion: inicial?.descripcion || "",
-    modelo: inicial?.modelo || "",
-    cantidad: inicial ? String(inicial.cantidad) : "1",
-    unidad: inicial?.unidad || "pza",
-    venta: inicial?.venta ? String(inicial.venta) : "",
-    costoEst: inicial?.costoEst ? String(inicial.costoEst) : "",
-    notas: inicial?.notas || "",
-  });
-  const s = (patch: Partial<typeof f>) => setF((x) => ({ ...x, ...patch }));
+function Campo({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!f.descripcion.trim()) return;
-        onGuardar({
-          descripcion: f.descripcion.trim(),
-          modelo: f.modelo.trim(),
-          cantidad: aNumero(f.cantidad),
-          unidad: f.unidad.trim(),
-          venta: aNumero(f.venta),
-          costoEst: aNumero(f.costoEst),
-          notas: f.notas,
-        });
-      }}
-      className="rounded-sm border border-accent/50 bg-card p-5 shadow-sm"
-    >
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
-        <Campo label="Descripción" className="col-span-2 md:col-span-3">
-          <Input autoFocus value={f.descripcion} onChange={(e) => s({ descripcion: e.target.value })} placeholder="Ej. Unidad paquete 5 TR" />
-        </Campo>
-        <Campo label="Marca / modelo" className="col-span-2 md:col-span-3">
-          <Input value={f.modelo} onChange={(e) => s({ modelo: e.target.value })} placeholder="Opcional" />
-        </Campo>
-        <Campo label="Cantidad">
-          <Input inputMode="decimal" value={f.cantidad} onChange={(e) => s({ cantidad: e.target.value })} />
-        </Campo>
-        <Campo label="Unidad">
-          <Input list="dl-unidades" value={f.unidad} onChange={(e) => s({ unidad: e.target.value })} />
-        </Campo>
-        <Campo label={`Venta P.U. (${moneda})`}>
-          <Input inputMode="decimal" value={f.venta} onChange={(e) => s({ venta: e.target.value })} placeholder="Lo que cotizamos" />
-        </Campo>
-        <Campo label={`Costo estimado P.U.`}>
-          <Input inputMode="decimal" value={f.costoEst} onChange={(e) => s({ costoEst: e.target.value })} placeholder="Opcional" />
-        </Campo>
-        <Campo label="Notas" className="col-span-2">
-          <Input value={f.notas} onChange={(e) => s({ notas: e.target.value })} placeholder="Especificaciones a respetar…" />
-        </Campo>
-      </div>
-      <div className="mt-4 flex gap-2">
-        <Button type="submit" disabled={!f.descripcion.trim()} className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
-          <Check className="mr-2 h-4 w-4" /> {inicial ? "Guardar partida" : "Agregar partida"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
-      </div>
-    </form>
-  );
-}
-
-function TarjetaPartida({
-  n, pa, p, archivosProv, onCambiar, onQuitar, onSubir, onAbrirArchivo, subiendo,
-}: {
-  n: number;
-  pa: Partida;
-  p: Proyecto;
-  archivosProv: Archivo[];
-  onCambiar: (fn: (pa: Partida) => Partida) => void;
-  onQuitar: () => void;
-  onSubir: (f: File) => Promise<Archivo | null>;
-  onAbrirArchivo: (a: Archivo) => void;
-  subiendo: boolean;
-}) {
-  const [editando, setEditando] = useState(false);
-  const [nuevaOferta, setNuevaOferta] = useState(false);
-  const [editOferta, setEditOferta] = useState<string | null>(null);
-  const a = analizar(pa, p);
-  const ordenadas = pa.ofertas
-    .slice()
-    .sort((x, y) => (enMonedaProyecto(x, p) ?? Infinity) - (enMonedaProyecto(y, p) ?? Infinity));
-
-  if (editando) {
-    return (
-      <FormPartida
-        inicial={pa}
-        moneda={p.moneda}
-        onCancelar={() => setEditando(false)}
-        onGuardar={(d) => {
-          onCambiar((x) => ({ ...x, ...d }));
-          setEditando(false);
-        }}
-      />
-    );
-  }
-
-  const guardarOferta = (o: Oferta) => {
-    onCambiar((x) => {
-      const existe = x.ofertas.some((z) => z.id === o.id);
-      const ofertas = existe ? x.ofertas.map((z) => (z.id === o.id ? o : z)) : [...x.ofertas, o];
-      return { ...x, ofertas };
-    });
-    setNuevaOferta(false);
-    setEditOferta(null);
-  };
-
-  return (
-    <div className={cn("rounded-sm border bg-card shadow-sm", a.porElegida ? "border-emerald-500/40" : "border-border")}>
-      {/* encabezado de la partida */}
-      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between md:p-5">
-        <div className="min-w-0 flex-1">
-          <p className="font-heading text-lg font-bold leading-snug text-foreground">
-            <span className="mr-2 text-muted-foreground">{n}.</span>
-            {pa.descripcion || "Sin descripción"}
-          </p>
-          <p className="mt-0.5 text-sm text-muted-foreground">
-            {[pa.modelo, `${pa.cantidad} ${pa.unidad}`, pa.notas].filter(Boolean).join(" · ")}
-          </p>
-        </div>
-        <div className="flex items-start gap-4 sm:text-right">
-          <div className="flex-1 sm:flex-none">
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Venta P.U.</p>
-            <p className="font-heading font-bold text-foreground">{dinero(pa.venta, p.moneda)}</p>
-            <p className="text-xs text-muted-foreground">total {dinero(pa.venta * pa.cantidad, p.moneda)}</p>
-          </div>
-          <div>
-            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Margen</p>
-            <p className={cn("font-heading text-lg font-bold", colorMargen(a.margen, p.margenObjetivo))}>{pct(a.margen)}</p>
-            {a.utilidad !== null && (
-              <p className={cn("text-xs", colorMargen(a.margen, p.margenObjetivo))}>{dinero(a.utilidad, p.moneda)}</p>
-            )}
-          </div>
-          <div className="flex flex-col gap-1">
-            <button type="button" onClick={() => setEditando(true)} aria-label="Editar partida" className="rounded-sm p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground">
-              <PencilLine className="h-4 w-4" />
-            </button>
-            <button type="button" onClick={onQuitar} aria-label="Quitar partida" className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-      {pa.costoEst > 0 && (
-        <p className="-mt-2 px-4 pb-3 text-xs text-muted-foreground md:px-5">
-          Costo estimado al cotizar: {dinero(pa.costoEst, p.moneda)} c/u
-          {a.costoUnit !== null && (
-            <span className={a.costoUnit > pa.costoEst ? " font-semibold text-amber-700" : " font-semibold text-emerald-700"}>
-              {" "}· el proveedor sale {a.costoUnit > pa.costoEst ? "arriba" : "abajo"} por {dinero(Math.abs(a.costoUnit - pa.costoEst), p.moneda)}
-            </span>
-          )}
-        </p>
-      )}
-
-      {/* ofertas */}
-      <div className="border-t border-border bg-secondary/20 px-4 py-3 md:px-5">
-        {ordenadas.length === 0 && !nuevaOferta && (
-          <p className="py-1 text-sm text-muted-foreground">Sin precios de proveedores todavía.</p>
-        )}
-        {ordenadas.length > 0 && (
-          <div className="mb-2 hidden grid-cols-[2rem_minmax(0,1.6fr)_minmax(0,1.2fr)_minmax(0,1fr)_6rem_4.5rem] gap-3 px-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground md:grid">
-            <span />
-            <span>Proveedor</span>
-            <span className="text-right">Precio P.U.</span>
-            <span>Entrega</span>
-            <span className="text-right">Margen</span>
-            <span />
-          </div>
-        )}
-        <div className="space-y-1.5">
-          {ordenadas.map((o) =>
-            editOferta === o.id ? (
-              <FormOferta
-                key={o.id}
-                inicial={o}
-                p={p}
-                pa={pa}
-                archivosProv={archivosProv}
-                onSubir={onSubir}
-                subiendo={subiendo}
-                onGuardar={guardarOferta}
-                onCancelar={() => setEditOferta(null)}
-              />
-            ) : (
-              <FilaOferta
-                key={o.id}
-                o={o}
-                p={p}
-                pa={pa}
-                elegida={pa.elegida === o.id}
-                masBarata={a.masBarata === o.id && ordenadas.length > 1}
-                archivo={archivosProv.find((z) => z.id === o.archivoId) || null}
-                onElegir={() => onCambiar((x) => ({ ...x, elegida: x.elegida === o.id ? "" : o.id }))}
-                onEditar={() => setEditOferta(o.id)}
-                onQuitar={() => onCambiar((x) => ({ ...x, ofertas: x.ofertas.filter((z) => z.id !== o.id), elegida: x.elegida === o.id ? "" : x.elegida }))}
-                onAbrirArchivo={onAbrirArchivo}
-              />
-            ),
-          )}
-        </div>
-        {nuevaOferta ? (
-          <FormOferta
-            p={p}
-            pa={pa}
-            archivosProv={archivosProv}
-            onSubir={onSubir}
-            subiendo={subiendo}
-            onGuardar={guardarOferta}
-            onCancelar={() => setNuevaOferta(false)}
-          />
-        ) : (
-          <Button variant="ghost" size="sm" onClick={() => setNuevaOferta(true)} className="mt-1 rounded-sm font-semibold text-foreground">
-            <Plus className="mr-1.5 h-4 w-4" /> Agregar precio de proveedor
-          </Button>
-        )}
-      </div>
+    <div className="space-y-1.5">
+      <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
+      {children}
     </div>
-  );
-}
-
-function FilaOferta({
-  o, p, pa, elegida, masBarata, archivo, onElegir, onEditar, onQuitar, onAbrirArchivo,
-}: {
-  o: Oferta;
-  p: Proyecto;
-  pa: Partida;
-  elegida: boolean;
-  masBarata: boolean;
-  archivo: Archivo | null;
-  onElegir: () => void;
-  onEditar: () => void;
-  onQuitar: () => void;
-  onAbrirArchivo: (a: Archivo) => void;
-}) {
-  const c = enMonedaProyecto(o, p);
-  const m = c !== null && pa.venta > 0 ? (pa.venta - c) / pa.venta : null;
-  return (
-    <div
-      className={cn(
-        "grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-sm px-2 py-2 text-sm md:grid-cols-[2rem_minmax(0,1.6fr)_minmax(0,1.2fr)_minmax(0,1fr)_6rem_4.5rem]",
-        elegida ? "bg-emerald-500/10 ring-1 ring-emerald-500/40" : "bg-card",
-      )}
-    >
-      <button
-        type="button"
-        onClick={onElegir}
-        title={elegida ? "Quitar como elegido" : "Elegir este proveedor"}
-        aria-pressed={elegida}
-        className={cn(
-          "row-span-2 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors md:row-span-1",
-          elegida ? "border-emerald-600 bg-emerald-600 text-white" : "border-muted-foreground/40 hover:border-emerald-600",
-        )}
-      >
-        {elegida && <Check className="h-3.5 w-3.5" />}
-      </button>
-      <div className="min-w-0">
-        <p className="truncate font-semibold text-foreground">
-          {o.proveedor || "Proveedor"}
-          {masBarata && <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">Más barato</span>}
-        </p>
-        {(o.notas || archivo) && (
-          <p className="truncate text-xs text-muted-foreground">
-            {archivo && (
-              <button type="button" onClick={() => onAbrirArchivo(archivo)} className="mr-2 inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground">
-                <Paperclip className="h-3 w-3" /> PDF
-              </button>
-            )}
-            {o.notas}
-          </p>
-        )}
-      </div>
-      <div className="text-right">
-        <p className="font-heading font-bold text-foreground">{dinero(o.precio, o.moneda)}</p>
-        {o.moneda !== p.moneda && <p className="text-xs text-muted-foreground">{c === null ? "falta tipo de cambio" : `≈ ${dinero(c, p.moneda)}`}</p>}
-      </div>
-      <p className="col-start-2 flex items-center gap-1 text-xs text-muted-foreground md:col-start-auto md:text-sm">
-        <Truck className="h-3.5 w-3.5 shrink-0 md:hidden" />
-        {o.entrega || "—"}
-      </p>
-      <p className={cn("text-right font-heading font-bold", colorMargen(m, p.margenObjetivo))}>{pct(m)}</p>
-      <div className="col-start-3 row-start-1 hidden justify-end gap-0.5 md:col-start-auto md:row-start-auto md:flex">
-        <button type="button" onClick={onEditar} aria-label="Editar precio" className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
-          <PencilLine className="h-4 w-4" />
-        </button>
-        <button type="button" onClick={onQuitar} aria-label="Quitar precio" className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-          <X className="h-4 w-4" />
-        </button>
-      </div>
-      {/* móvil: acciones en una línea aparte */}
-      <div className="col-span-3 flex justify-end gap-3 text-xs md:hidden">
-        <button type="button" onClick={onEditar} className="font-semibold text-muted-foreground">Editar</button>
-        <button type="button" onClick={onQuitar} className="font-semibold text-muted-foreground">Quitar</button>
-      </div>
-    </div>
-  );
-}
-
-/** Lecturas de PDF de proveedores ya hechas en esta sesión (por id de archivo). */
-const cacheLecturas = new Map<string, ResultadoPdf>();
-
-function FormOferta({
-  inicial, p, pa, archivosProv, onSubir, subiendo, onGuardar, onCancelar,
-}: {
-  inicial?: Oferta;
-  p: Proyecto;
-  pa: Partida;
-  archivosProv: Archivo[];
-  onSubir: (f: File) => Promise<Archivo | null>;
-  subiendo: boolean;
-  onGuardar: (o: Oferta) => void;
-  onCancelar: () => void;
-}) {
-  const [f, setF] = useState({
-    proveedor: inicial?.proveedor || "",
-    precio: inicial?.precio ? String(inicial.precio) : "",
-    moneda: (inicial?.moneda || p.moneda) as Moneda,
-    entrega: inicial?.entrega || "",
-    notas: inicial?.notas || "",
-    archivoId: inicial?.archivoId || "",
-  });
-  const [lectura, setLectura] = useState<ResultadoPdf | null>(null);
-  const [leyendo, setLeyendo] = useState(false);
-  const s = (patch: Partial<typeof f>) => setF((x) => ({ ...x, ...patch }));
-
-  async function leer(a: Archivo, file?: File) {
-    if (a.tipo !== "application/pdf") return;
-    const enCache = cacheLecturas.get(a.id);
-    if (enCache) return setLectura(enCache);
-    setLeyendo(true);
-    try {
-      const blob = file || (await bajarArchivo(p.id, a));
-      const r = await leerPdf(blob);
-      cacheLecturas.set(a.id, r);
-      setLectura(r);
-    } catch {
-      setLectura(null);
-    } finally {
-      setLeyendo(false);
-    }
-  }
-
-  async function elegirArchivo(id: string) {
-    s({ archivoId: id });
-    setLectura(null);
-    const a = archivosProv.find((z) => z.id === id);
-    if (a) leer(a);
-  }
-
-  async function subirNuevo(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    e.target.value = "";
-    if (!file) return;
-    const a = await onSubir(file);
-    if (a) {
-      s({ archivoId: a.id });
-      leer(a, file);
-    }
-  }
-
-  // Precios del PDF ordenados por parecido con la partida (las palabras en común primero).
-  const sugerencias = useMemo(() => {
-    if (!lectura) return [];
-    const palabras = normalizar(`${pa.descripcion} ${pa.modelo}`).split(" ").filter((w) => w.length > 2);
-    return lectura.partidas
-      .filter((x) => x.precio > 0)
-      .map((x) => {
-        const t = normalizar(`${x.descripcion} ${x.modelo}`);
-        return { x, puntos: palabras.filter((w) => t.includes(w)).length };
-      })
-      .sort((a, b) => b.puntos - a.puntos)
-      .slice(0, 6);
-  }, [lectura, pa.descripcion, pa.modelo]);
-
-  return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (!f.proveedor.trim() && !f.precio) return;
-        onGuardar({
-          id: inicial?.id || nid(),
-          proveedor: f.proveedor.trim(),
-          precio: aNumero(f.precio),
-          moneda: f.moneda,
-          entrega: f.entrega.trim(),
-          notas: f.notas.trim(),
-          archivoId: f.archivoId,
-        });
-      }}
-      className="mt-2 rounded-sm border border-accent/50 bg-card p-3"
-    >
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_5.5rem_minmax(0,1fr)]">
-        <Input list="dl-proveedores" autoFocus placeholder="Proveedor" value={f.proveedor} onChange={(e) => s({ proveedor: e.target.value })} className="col-span-2 md:col-span-1" aria-label="Proveedor" />
-        <Input inputMode="decimal" placeholder="Precio unitario sin IVA" value={f.precio} onChange={(e) => s({ precio: e.target.value })} aria-label="Precio unitario" />
-        <Select value={f.moneda} onValueChange={(v) => s({ moneda: v as Moneda })}>
-          <SelectTrigger className="bg-background" aria-label="Moneda"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="MXN">MXN</SelectItem>
-            <SelectItem value="USD">USD</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input placeholder="Entrega (ej. 2 semanas)" value={f.entrega} onChange={(e) => s({ entrega: e.target.value })} className="col-span-2 md:col-span-1" aria-label="Tiempo de entrega" />
-        <Input placeholder="Notas (garantía, flete, marca…)" value={f.notas} onChange={(e) => s({ notas: e.target.value })} className="col-span-2 md:col-span-2" aria-label="Notas" />
-        <div className="col-span-2 flex items-center gap-2">
-          {/* <select> nativo a propósito: el Select de Radix se resetea cuando la opción recién subida aparece en la lista */}
-          <select
-            value={f.archivoId}
-            onChange={(e) => (e.target.value ? elegirArchivo(e.target.value) : s({ archivoId: "" }))}
-            aria-label="Cotización del proveedor"
-            className="h-10 min-w-0 flex-1 truncate rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">Sin PDF del proveedor</option>
-            {archivosProv.map((a) => (
-              <option key={a.id} value={a.id}>{a.nombre}</option>
-            ))}
-          </select>
-          <label className={cn("inline-flex h-10 shrink-0 cursor-pointer items-center rounded-sm border border-dashed border-accent/60 px-3 text-xs font-semibold hover:bg-accent/10", subiendo && "pointer-events-none opacity-60")}>
-            {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
-            <span className="ml-1.5 hidden sm:inline">Subir PDF</span>
-            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={subirNuevo} />
-          </label>
-        </div>
-      </div>
-
-      {leyendo && (
-        <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando precios en el PDF…
-        </p>
-      )}
-      {sugerencias.length > 0 && (
-        <div className="mt-2">
-          <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Precios encontrados en el PDF — toca uno para usarlo</p>
-          <div className="flex flex-wrap gap-1.5">
-            {sugerencias.map(({ x }, i) => (
-              <button
-                key={i}
-                type="button"
-                onClick={() => s({ precio: String(x.precio), moneda: lectura!.moneda })}
-                className="max-w-full rounded-sm border border-border bg-secondary/40 px-2 py-1 text-left text-xs hover:border-accent"
-              >
-                <span className="font-bold">{dinero(x.precio, lectura!.moneda)}</span>{" "}
-                <span className="text-muted-foreground">{(x.descripcion || x.modelo).slice(0, 60)}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-      {lectura && sugerencias.length === 0 && !leyendo && (
-        <p className="mt-2 text-xs text-muted-foreground">No se encontraron precios en ese PDF; captúralo a mano.</p>
-      )}
-
-      <div className="mt-3 flex gap-2">
-        <Button type="submit" size="sm" disabled={!f.proveedor.trim() && !f.precio} className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
-          <Check className="mr-1.5 h-4 w-4" /> {inicial ? "Guardar" : "Agregar"}
-        </Button>
-        <Button type="button" size="sm" variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
-      </div>
-    </form>
-  );
-}
-
-/* ───────────── Importar partidas del PDF ───────────── */
-
-interface FilaImport extends PartidaLeida {
-  incluir: boolean;
-}
-
-function DialogoImportar({
-  resultado, nombreArchivo, onCancelar, onConfirmar,
-}: {
-  resultado: ResultadoPdf;
-  nombreArchivo: string;
-  onCancelar: () => void;
-  onConfirmar: (filas: PartidaLeida[], guardarPdf: boolean, moneda: Moneda) => void;
-}) {
-  const [filas, setFilas] = useState<FilaImport[]>(resultado.partidas.map((x) => ({ ...x, incluir: true })));
-  const [guardarPdf, setGuardarPdf] = useState(true);
-  const [moneda, setMoneda] = useState<Moneda>(resultado.moneda);
-  const setFila = (i: number, patch: Partial<FilaImport>) => setFilas((fs) => fs.map((x, k) => (k === i ? { ...x, ...patch } : x)));
-  const elegidas = filas.filter((x) => x.incluir && x.descripcion.trim());
-  const total = elegidas.reduce((s, x) => s + x.cantidad * x.precio, 0);
-
-  return (
-    <Dialog open onOpenChange={(o) => !o && onCancelar()}>
-      <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-sm">
-        <DialogHeader>
-          <DialogTitle>Partidas encontradas en el PDF</DialogTitle>
-          <DialogDescription>
-            {nombreArchivo} — revisa y corrige antes de agregarlas. Los precios son los de venta (lo que cotizamos al cliente).
-          </DialogDescription>
-        </DialogHeader>
-
-        {filas.length === 0 ? (
-          <div className="rounded-sm border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            No se encontraron partidas con precio en este PDF (puede ser un escaneo o un formato raro). Agrégalas a mano con
-            “Partida a mano”.
-          </div>
-        ) : (
-          <>
-            {!resultado.conEncabezado && (
-              <p className="rounded-sm bg-amber-500/10 px-3 py-2 text-xs text-amber-900">
-                No se reconoció la tabla del PDF; estas partidas se adivinaron por renglones con precio. Revísalas con cuidado.
-              </p>
-            )}
-            <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_5rem_4.5rem_7.5rem] gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground md:grid">
-              <span />
-              <span>Descripción</span>
-              <span>Cant.</span>
-              <span>Unidad</span>
-              <span>Venta P.U.</span>
-            </div>
-            <div className="space-y-2">
-              {filas.map((x, i) => (
-                <div key={i} className={cn("grid grid-cols-[1.5rem_1fr_1fr_1fr] items-center gap-2 md:grid-cols-[1.5rem_minmax(0,1fr)_5rem_4.5rem_7.5rem]", !x.incluir && "opacity-40")}>
-                  <Checkbox checked={x.incluir} onCheckedChange={(v) => setFila(i, { incluir: !!v })} aria-label="Incluir partida" className="row-span-2 md:row-span-1" />
-                  <Input value={x.descripcion} onChange={(e) => setFila(i, { descripcion: e.target.value })} className="col-span-3 md:col-span-1" aria-label="Descripción" />
-                  <Input inputMode="decimal" value={String(x.cantidad)} onChange={(e) => setFila(i, { cantidad: aNumero(e.target.value) })} aria-label="Cantidad" />
-                  <Input value={x.unidad} onChange={(e) => setFila(i, { unidad: e.target.value })} aria-label="Unidad" />
-                  <Input inputMode="decimal" value={String(x.precio)} onChange={(e) => setFila(i, { precio: aNumero(e.target.value) })} aria-label="Precio de venta unitario" />
-                </div>
-              ))}
-            </div>
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-sm">
-              <label className="flex items-center gap-2">
-                <Checkbox checked={guardarPdf} onCheckedChange={(v) => setGuardarPdf(!!v)} /> Guardar el PDF en los archivos del proyecto
-              </label>
-              <div className="flex items-center gap-3">
-                <Select value={moneda} onValueChange={(v) => setMoneda(v as Moneda)}>
-                  <SelectTrigger className="h-9 w-24 bg-background"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="MXN">MXN</SelectItem>
-                    <SelectItem value="USD">USD</SelectItem>
-                  </SelectContent>
-                </Select>
-                <span className="font-heading font-bold">Subtotal {dinero(total, moneda)}</span>
-              </div>
-            </div>
-          </>
-        )}
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
-          <Button
-            disabled={elegidas.length === 0}
-            onClick={() => onConfirmar(elegidas.map(({ incluir: _i, ...r }) => r), guardarPdf, moneda)}
-            className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90"
-          >
-            Agregar {elegidas.length} partidas
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   );
 }
