@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSeo } from "@/lib/seo";
 import { Link, useLocation, useSearch } from "wouter";
 import { Layout } from "@/components/layout/Layout";
@@ -7,30 +7,187 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { useToast } from "@/hooks/use-toast";
 import { getSession, authHeaders, clearSession } from "@/lib/portal-auth";
 import { leerPdf, type PartidaLeida, type ResultadoPdf } from "@/lib/pdf-partidas";
-import {
-  agrupar, analizar, aNumero, coincide, colorMargen, costoTotal, dinero, nid, normalizar, nuevaOferta, nuevaPartida,
-  ofertaValida, pct, resumenTexto, totalizar,
-  type Archivo, type Moneda, type Oferta, type Partida, type Proyecto,
-} from "@/lib/cotizaciones";
-import type { ResultadoExcel } from "@/lib/excel-cotizacion";
 import { cn } from "@/lib/utils";
 import {
-  AlertTriangle, ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronRight, ClipboardCopy, Copy, Download, FileSpreadsheet,
-  FileUp, FolderKanban, Loader2, LogOut, MessageCircle, Paperclip, Plus, RefreshCcw, Search, Trash2, X,
+  AlertTriangle, ArrowLeft, Check, CheckCircle2, ClipboardCopy, FileText, FileUp, Loader2, LogOut,
+  MessageCircle, Paperclip, PencilLine, Plus, RefreshCcw, Search, Trash2, X, FolderKanban, Truck,
 } from "lucide-react";
 
-/* ═════════════════════════ API ═════════════════════════ */
+/* ═════════════════════════ Tipos ═════════════════════════ */
+
+type Moneda = "MXN" | "USD";
+
+interface Archivo {
+  id: string;
+  nombre: string;
+  tipo: string;
+  tamano: number;
+  rol: "nuestra" | "proveedor";
+  subido: number;
+  subidoPor: string;
+}
+
+interface Oferta {
+  id: string;
+  proveedor: string;
+  precio: number; // P.U. sin IVA, en su moneda
+  moneda: Moneda;
+  entrega: string;
+  notas: string;
+  archivoId: string;
+}
+
+interface Partida {
+  id: string;
+  descripcion: string;
+  modelo: string;
+  cantidad: number;
+  unidad: string;
+  venta: number; // P.U. sin IVA que cotizamos al cliente, en la moneda del proyecto
+  costoEst: number; // costo que se estimó al cotizar (opcional)
+  notas: string;
+  ofertas: Oferta[];
+  elegida: string;
+}
+
+interface Proyecto {
+  id: string;
+  nombre: string;
+  cliente: string;
+  folio: string;
+  moneda: Moneda;
+  tipoCambio: number;
+  margenObjetivo: number;
+  estatus: "Cotizando" | "Comprado";
+  notas: string;
+  partidas: Partida[];
+  archivos: Archivo[];
+  version: number;
+  creadoPor: string;
+  actualizadoPor: string;
+  creado: number;
+  actualizado: number;
+}
+
+/* ═════════════════════════ Utilidades ═════════════════════════ */
 
 const MAX_ARCHIVO = 4 * 1024 * 1024;
+const UNIDADES = ["pza", "m", "m²", "kg", "lt", "rollo", "caja", "juego", "lote", "servicio", "hr"];
+
 class SesionExpirada extends Error {}
 
+const nid = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+
+function dinero(n: number, m: Moneda = "MXN"): string {
+  return new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: m,
+    currencyDisplay: m === "MXN" ? "narrowSymbol" : "code",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(n || 0);
+}
+
+const pct = (n: number | null) => (n === null ? "—" : `${(n * 100).toFixed(1)}%`);
+
+const aNumero = (s: string) => {
+  const n = Number(String(s).replace(/[,\s$]/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+
+const normalizar = (s: string) =>
+  s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/\s+/g, " ").trim();
+
+function coincide(texto: string, q: string) {
+  const t = normalizar(texto);
+  return normalizar(q).split(" ").filter(Boolean).every((w) => t.includes(w));
+}
+
+/** Precio de la oferta convertido a la moneda del proyecto (null si falta tipo de cambio). */
+function enMonedaProyecto(o: Oferta, p: Pick<Proyecto, "moneda" | "tipoCambio">): number | null {
+  if (o.moneda === p.moneda) return o.precio;
+  if (!p.tipoCambio) return null;
+  return o.moneda === "USD" ? o.precio * p.tipoCambio : o.precio / p.tipoCambio;
+}
+
+interface Analisis {
+  costoUnit: number | null; // del proveedor elegido o, si no hay, del más barato
+  oferta: Oferta | null;
+  porElegida: boolean;
+  masBarata: string; // id
+  margen: number | null; // sobre venta
+  utilidad: number | null; // total de la partida
+}
+
+function analizar(pa: Partida, p: Pick<Proyecto, "moneda" | "tipoCambio">): Analisis {
+  const conv = pa.ofertas
+    .filter((o) => o.precio > 0)
+    .map((o) => ({ o, c: enMonedaProyecto(o, p) }))
+    .filter((x): x is { o: Oferta; c: number } => x.c !== null)
+    .sort((a, b) => a.c - b.c);
+  const masBarata = conv[0]?.o.id || "";
+  const elegida = conv.find((x) => x.o.id === pa.elegida);
+  const usar = elegida || conv[0];
+  if (!usar) return { costoUnit: null, oferta: null, porElegida: false, masBarata, margen: null, utilidad: null };
+  const margen = pa.venta > 0 ? (pa.venta - usar.c) / pa.venta : null;
+  return {
+    costoUnit: usar.c,
+    oferta: usar.o,
+    porElegida: !!elegida,
+    masBarata,
+    margen,
+    utilidad: (pa.venta - usar.c) * (pa.cantidad || 0),
+  };
+}
+
+function totalesProyecto(p: Proyecto) {
+  let venta = 0;
+  let ventaCotizada = 0;
+  let costo = 0;
+  let cotizadas = 0;
+  let elegidas = 0;
+  for (const pa of p.partidas) {
+    const v = pa.venta * (pa.cantidad || 0);
+    venta += v;
+    const a = analizar(pa, p);
+    if (a.costoUnit !== null) {
+      cotizadas++;
+      ventaCotizada += v;
+      costo += a.costoUnit * (pa.cantidad || 0);
+      if (a.porElegida) elegidas++;
+    }
+  }
+  const utilidad = ventaCotizada - costo;
+  return {
+    venta,
+    ventaCotizada,
+    costo,
+    utilidad,
+    margen: ventaCotizada > 0 ? utilidad / ventaCotizada : null,
+    cotizadas,
+    elegidas,
+    total: p.partidas.length,
+  };
+}
+
+function colorMargen(m: number | null, objetivo: number) {
+  if (m === null) return "text-muted-foreground";
+  if (m < 0) return "text-destructive";
+  if (m * 100 < objetivo) return "text-amber-700";
+  return "text-emerald-700";
+}
+
 async function api(path: string, init: RequestInit = {}): Promise<Response> {
-  const res = await fetch(path, { ...init, headers: { ...(init.headers as Record<string, string>), ...authHeaders() } });
+  const res = await fetch(path, {
+    ...init,
+    headers: { ...(init.headers as Record<string, string>), ...authHeaders() },
+  });
   if (res.status === 401) throw new SesionExpirada();
   return res;
 }
@@ -40,6 +197,7 @@ async function errorDe(res: Response, fallback: string) {
   return new Error(data?.error || fallback);
 }
 
+/** Fotos grandes se comprimen; los PDF van tal cual (máx 4 MB). */
 function prepararArchivo(file: File): Promise<Blob> {
   if (!file.type.startsWith("image/") || file.size < 1.5 * 1024 * 1024) return Promise.resolve(file);
   return new Promise((res, rej) => {
@@ -88,13 +246,70 @@ async function bajarArchivo(proyectoId: string, a: Archivo): Promise<Blob> {
   return res.blob();
 }
 
-function descargar(blob: Blob, nombre: string) {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = nombre;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+/* ─────────── Resumen para el grupo (WhatsApp) y Excel ─────────── */
+
+function resumenTexto(p: Proyecto): string {
+  const t = totalesProyecto(p);
+  const l: string[] = [];
+  l.push(`*${p.nombre}* — comparativo de proveedores`);
+  const sub = [p.cliente && `Cliente: ${p.cliente}`, p.folio && `Cot. ${p.folio}`].filter(Boolean).join(" · ");
+  if (sub) l.push(sub);
+  l.push(`_Precios unitarios sin IVA${p.tipoCambio ? ` · TC USD ${dinero(p.tipoCambio)}` : ""}_`);
+  p.partidas.forEach((pa, i) => {
+    const a = analizar(pa, p);
+    l.push("");
+    l.push(`*${i + 1}. ${pa.descripcion || "Sin descripción"}* (${pa.cantidad} ${pa.unidad})`);
+    l.push(`Venta: ${dinero(pa.venta, p.moneda)} c/u`);
+    if (pa.ofertas.length === 0) {
+      l.push("⏳ Sin cotizar todavía");
+      return;
+    }
+    const ordenadas = pa.ofertas
+      .slice()
+      .sort((x, y) => (enMonedaProyecto(x, p) ?? Infinity) - (enMonedaProyecto(y, p) ?? Infinity));
+    for (const o of ordenadas) {
+      const c = enMonedaProyecto(o, p);
+      const m = c !== null && pa.venta > 0 ? (pa.venta - c) / pa.venta : null;
+      const marca = o.id === pa.elegida ? "✅" : "•";
+      const precio =
+        o.moneda !== p.moneda && c !== null
+          ? `${dinero(o.precio, o.moneda)} (≈${dinero(c, p.moneda)})`
+          : dinero(o.precio, o.moneda);
+      const extras = [o.entrega, `margen ${pct(m)}`, o.id === a.masBarata && ordenadas.length > 1 ? "más barato" : ""]
+        .filter(Boolean)
+        .join(" · ");
+      l.push(`${marca} ${o.proveedor || "Proveedor"}: ${precio} · ${extras}`);
+    }
+  });
+  l.push("");
+  l.push(`*Totales* (${t.cotizadas} de ${t.total} partidas cotizadas)`);
+  l.push(`Venta: ${dinero(t.ventaCotizada, p.moneda)}`);
+  l.push(`Costo: ${dinero(t.costo, p.moneda)}`);
+  l.push(`Utilidad: ${dinero(t.utilidad, p.moneda)} (${pct(t.margen)})`);
+  if (t.elegidas < t.cotizadas) l.push("_Donde no hay ✅ se tomó el proveedor más barato._");
+  return l.join("\n");
+}
+
+function tablaExcel(p: Proyecto): string {
+  const enc = [
+    "#", "Descripción", "Modelo", "Cantidad", "Unidad", `Venta P.U. (${p.moneda})`, "Proveedor", "Precio P.U.",
+    "Moneda", `Precio en ${p.moneda}`, "Entrega", "Margen %", `Utilidad total (${p.moneda})`, "Elegido",
+  ];
+  const filas: string[][] = [];
+  p.partidas.forEach((pa, i) => {
+    const base = [String(i + 1), pa.descripcion, pa.modelo, String(pa.cantidad), pa.unidad, pa.venta.toFixed(2)];
+    if (pa.ofertas.length === 0) filas.push([...base, "", "", "", "", "", "", "", ""]);
+    for (const o of pa.ofertas) {
+      const c = enMonedaProyecto(o, p);
+      const m = c !== null && pa.venta > 0 ? (pa.venta - c) / pa.venta : null;
+      filas.push([
+        ...base, o.proveedor, o.precio.toFixed(2), o.moneda, c === null ? "" : c.toFixed(2), o.entrega,
+        m === null ? "" : (m * 100).toFixed(1), c === null ? "" : ((pa.venta - c) * pa.cantidad).toFixed(2),
+        o.id === pa.elegida ? "Sí" : "",
+      ]);
+    }
+  });
+  return [enc, ...filas].map((f) => f.map((v) => String(v).replace(/[\t\n]/g, " ")).join("\t")).join("\n");
 }
 
 /* ═════════════════════════ Página ═════════════════════════ */
@@ -144,7 +359,8 @@ export default function PortalCotizaciones() {
   }, []);
 
   const proveedores = useMemo(
-    () => Array.from(new Set(items.flatMap((p) => p.partidas.flatMap((pa) => pa.ofertas.map((o) => o.proveedor.trim()))).filter(Boolean))).sort(),
+    () =>
+      Array.from(new Set(items.flatMap((p) => p.partidas.flatMap((pa) => pa.ofertas.map((o) => o.proveedor))).filter(Boolean))).sort(),
     [items],
   );
 
@@ -156,7 +372,10 @@ export default function PortalCotizaciones() {
         .filter(
           (p) =>
             !q.trim() ||
-            coincide([p.nombre, p.cliente, p.folio, ...p.partidas.map((pa) => `${pa.descripcion} ${pa.ofertas.map((o) => o.proveedor).join(" ")}`)].join(" "), q),
+            coincide(
+              [p.nombre, p.cliente, p.folio, ...p.partidas.map((pa) => `${pa.descripcion} ${pa.modelo} ${pa.ofertas.map((o) => o.proveedor).join(" ")}`)].join(" "),
+              q,
+            ),
         ),
     [items, q],
   );
@@ -187,8 +406,10 @@ export default function PortalCotizaciones() {
     }
   }
 
+  const actualizarEnLista = (p: Proyecto) => setItems((its) => its.map((i) => (i.id === p.id ? p : i)));
+
   async function eliminar(p: Proyecto) {
-    if (!window.confirm(`¿Eliminar el proyecto "${p.nombre}" con todos sus renglones, opciones y archivos? No se puede deshacer.`)) return;
+    if (!window.confirm(`¿Eliminar el proyecto "${p.nombre}" con todas sus ofertas y archivos? No se puede deshacer.`)) return;
     try {
       const res = await api(`/api/cotizaciones/${p.id}`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw await errorDe(res, "No se pudo eliminar.");
@@ -205,7 +426,7 @@ export default function PortalCotizaciones() {
 
   return (
     <Layout>
-      <section className="relative overflow-hidden bg-ink-gradient pb-8 pt-28 text-primary-foreground">
+      <section className="relative overflow-hidden bg-ink-gradient pb-10 pt-28 text-primary-foreground">
         <TechBackdrop />
         <div className="container relative z-10 mx-auto px-4">
           <div className="flex flex-wrap items-end justify-between gap-4">
@@ -216,7 +437,9 @@ export default function PortalCotizaciones() {
               <h1 className="flex items-center gap-3 font-heading text-3xl font-bold text-white md:text-4xl">
                 <FolderKanban className="h-8 w-8 text-accent" /> Cotizaciones
               </h1>
-              <p className="mt-1 text-sm text-primary-foreground/60">Venta al cliente vs. costo con proveedores · {session.email}</p>
+              <p className="mt-1 text-sm text-primary-foreground/60">
+                Nuestra cotización vs. precios de proveedores · {session.email}
+              </p>
             </div>
             <div className="flex gap-2">
               {!abiertoId && (
@@ -240,11 +463,9 @@ export default function PortalCotizaciones() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-[1720px] px-4 py-8">
+      <section className="container mx-auto max-w-6xl px-4 py-10">
         <datalist id="dl-proveedores">{proveedores.map((p) => <option key={p} value={p} />)}</datalist>
-        <datalist id="dl-unidades">
-          {["Pza", "Ml", "m2", "Kg", "Lote", "Jgo", "Rollo", "Galón", "Bolsa", "Tramo", "Caja", "Servicio", "Hr"].map((u) => <option key={u} value={u} />)}
-        </datalist>
+        <datalist id="dl-unidades">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
 
         {loading ? (
           <div className="py-20 text-center text-muted-foreground">
@@ -257,7 +478,7 @@ export default function PortalCotizaciones() {
               key={abierto.id}
               inicial={abierto}
               onVolver={cerrar}
-              onCambio={(p) => setItems((its) => its.map((i) => (i.id === p.id ? p : i)))}
+              onCambio={actualizarEnLista}
               onEliminar={() => eliminar(abierto)}
               onError={manejarError}
             />
@@ -270,7 +491,43 @@ export default function PortalCotizaciones() {
             </div>
           )
         ) : (
-          <ListaProyectos items={filtrados} hayAlguno={items.length > 0} q={q} setQ={setQ} onAbrir={abrir} onNuevo={() => setCreando(true)} />
+          <>
+            <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-center">
+              <div className="relative flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar proyecto, cliente, material o proveedor…" className="bg-background pl-9" />
+              </div>
+              <Button onClick={() => setCreando(true)} className="h-11 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
+                <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
+              </Button>
+            </div>
+
+            {filtrados.length === 0 ? (
+              <div className="rounded-sm border border-dashed border-border bg-card px-6 py-14 text-center">
+                {items.length === 0 ? (
+                  <>
+                    <FolderKanban className="mx-auto mb-3 h-10 w-10 text-accent-foreground/60" />
+                    <p className="font-heading text-lg font-bold text-foreground">Empieza con tu primer proyecto</p>
+                    <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
+                      Crea el proyecto (ej. “Proyecto CIEC”), sube el PDF de nuestra cotización para sacar las partidas y
+                      ve agregando los precios de cada proveedor.
+                    </p>
+                    <Button onClick={() => setCreando(true)} className="mt-5 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
+                      <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nada coincide con la búsqueda.</p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {filtrados.map((p) => (
+                  <TarjetaProyecto key={p.id} p={p} onAbrir={() => abrir(p.id)} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 
@@ -279,91 +536,37 @@ export default function PortalCotizaciones() {
   );
 }
 
-/* ═════════════════════════ Lista de proyectos ═════════════════════════ */
+/* ═════════════════════════ Lista ═════════════════════════ */
 
-function ListaProyectos({
-  items, hayAlguno, q, setQ, onAbrir, onNuevo,
-}: {
-  items: Proyecto[];
-  hayAlguno: boolean;
-  q: string;
-  setQ: (s: string) => void;
-  onAbrir: (id: string) => void;
-  onNuevo: () => void;
-}) {
+function TarjetaProyecto({ p, onAbrir }: { p: Proyecto; onAbrir: () => void }) {
+  const t = totalesProyecto(p);
   return (
-    <div className="mx-auto max-w-6xl">
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar proyecto, cliente, concepto o proveedor…" className="bg-background pl-9" />
-        </div>
-        <Button onClick={onNuevo} className="h-11 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
-          <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
-        </Button>
+    <button type="button" onClick={onAbrir} className="group rounded-sm border border-border bg-card p-5 text-left transition-colors hover:border-accent/60">
+      <div className="mb-1 flex items-center gap-2">
+        <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", p.estatus === "Comprado" ? "bg-emerald-500/15 text-emerald-800" : "bg-accent/20 text-accent-foreground")}>
+          {p.estatus}
+        </span>
+        {p.folio && <span className="font-mono text-xs text-muted-foreground">{p.folio}</span>}
       </div>
-
-      {items.length === 0 ? (
-        <div className="rounded-sm border border-dashed border-border bg-card px-6 py-14 text-center">
-          {hayAlguno ? (
-            <p className="text-sm text-muted-foreground">Nada coincide con la búsqueda.</p>
-          ) : (
-            <>
-              <FileSpreadsheet className="mx-auto mb-3 h-10 w-10 text-accent-foreground/60" />
-              <p className="font-heading text-lg font-bold text-foreground">Empieza con tu primer proyecto</p>
-              <p className="mx-auto mt-1 max-w-md text-sm text-muted-foreground">
-                Crea el proyecto y sube tu Excel de cotización (o el PDF que mandó el tío). Después ve agregando las opciones de
-                proveedor de cada concepto.
-              </p>
-              <Button onClick={onNuevo} className="mt-5 rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
-                <Plus className="mr-2 h-4 w-4" /> Nuevo proyecto
-              </Button>
-            </>
-          )}
+      <p className="font-heading text-xl font-bold text-foreground">{p.nombre}</p>
+      {p.cliente && <p className="text-sm text-muted-foreground">{p.cliente}</p>}
+      <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border pt-3 text-sm">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Partidas</p>
+          <p className="font-semibold text-foreground">
+            {t.cotizadas}/{t.total} <span className="font-normal text-muted-foreground">cotizadas</span>
+          </p>
         </div>
-      ) : (
-        <div className="overflow-x-auto rounded-sm border border-border bg-card">
-          <table className="w-full min-w-[760px] text-sm">
-            <thead>
-              <tr className="border-b border-border bg-secondary/60 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <th className="px-4 py-2.5">Proyecto</th>
-                <th className="px-3 py-2.5">Estatus</th>
-                <th className="px-3 py-2.5 text-right">Conceptos</th>
-                <th className="px-3 py-2.5 text-right">Venta</th>
-                <th className="px-3 py-2.5 text-right">Costo</th>
-                <th className="px-3 py-2.5 text-right">Margen</th>
-                <th className="px-4 py-2.5 text-right">Actualizado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((p) => {
-                const t = totalizar(p.partidas, p);
-                return (
-                  <tr key={p.id} onClick={() => onAbrir(p.id)} className="cursor-pointer border-b border-border last:border-0 hover:bg-secondary/40">
-                    <td className="px-4 py-3">
-                      <p className="font-heading font-bold text-foreground">{p.nombre}</p>
-                      <p className="text-xs text-muted-foreground">{[p.cliente, p.folio].filter(Boolean).join(" · ")}</p>
-                    </td>
-                    <td className="px-3 py-3">
-                      <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-bold", p.estatus === "Comprado" ? "bg-emerald-500/15 text-emerald-800" : "bg-accent/20 text-accent-foreground")}>
-                        {p.estatus}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 text-right tabular-nums">
-                      {t.conCosto}/{t.total} <span className="text-xs text-muted-foreground">con costo</span>
-                    </td>
-                    <td className="px-3 py-3 text-right tabular-nums">{dinero(t.venta, p.moneda)}</td>
-                    <td className="px-3 py-3 text-right tabular-nums">{dinero(t.costo, p.moneda)}</td>
-                    <td className={cn("px-3 py-3 text-right font-bold tabular-nums", colorMargen(t.margen, p.margenObjetivo))}>{pct(t.margen)}</td>
-                    <td className="px-4 py-3 text-right text-xs text-muted-foreground">{new Date(p.actualizado).toLocaleDateString("es-MX", { day: "2-digit", month: "short" })}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Venta</p>
+          <p className="font-semibold text-foreground">{dinero(t.venta, p.moneda)}</p>
         </div>
-      )}
-    </div>
+        <div>
+          <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Margen</p>
+          <p className={cn("font-heading font-bold", colorMargen(t.margen, p.margenObjetivo))}>{pct(t.margen)}</p>
+        </div>
+      </div>
+    </button>
   );
 }
 
@@ -390,7 +593,7 @@ function NuevoProyecto({ abierto, onCerrar, onCrear }: { abierto: boolean; onCer
           }}
           className="space-y-4"
         >
-          <Input autoFocus placeholder="Ej. Proyecto SIEQ" value={nombre} onChange={(e) => setNombre(e.target.value)} />
+          <Input autoFocus placeholder="Ej. Proyecto CIEC" value={nombre} onChange={(e) => setNombre(e.target.value)} />
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onCerrar} className="rounded-sm">Cancelar</Button>
             <Button type="submit" disabled={!nombre.trim() || enviando} className="rounded-sm bg-accent font-bold uppercase text-accent-foreground hover:bg-accent/90">
@@ -403,82 +606,7 @@ function NuevoProyecto({ abierto, onCerrar, onCrear }: { abierto: boolean; onCer
   );
 }
 
-/* ═════════════════════════ Celdas editables ═════════════════════════ */
-
-/**
- * Celda tipo hoja de cálculo: se ve como texto, se edita al enfocarla y
- * guarda al salir (blur) o con Enter. Escape descarta.
- */
-function Celda({
-  valor, onCambio, tipo = "texto", moneda = "MXN", placeholder, list, className, multilinea, atenuado, ariaLabel,
-}: {
-  valor: string | number;
-  onCambio: (v: string) => void;
-  tipo?: "texto" | "numero" | "dinero";
-  moneda?: Moneda;
-  placeholder?: string;
-  list?: string;
-  className?: string;
-  multilinea?: boolean;
-  atenuado?: boolean;
-  ariaLabel?: string;
-}) {
-  const [foco, setFoco] = useState(false);
-  const [borrador, setBorrador] = useState("");
-  const crudo = typeof valor === "number" ? (valor ? String(valor) : "") : valor;
-  const mostrado =
-    tipo === "dinero" && typeof valor === "number" && valor
-      ? dinero(valor, moneda)
-      : tipo === "numero" && typeof valor === "number" && valor
-        ? valor.toLocaleString("es-MX", { maximumFractionDigits: 4 })
-        : crudo;
-
-  const base = cn(
-    "w-full rounded-sm bg-transparent px-1.5 py-1 text-sm outline-none transition-colors hover:bg-secondary/60 focus:bg-background focus:ring-2 focus:ring-accent",
-    tipo !== "texto" && "text-right tabular-nums",
-    atenuado && "italic text-muted-foreground",
-    className,
-  );
-  const props = {
-    value: foco ? borrador : mostrado,
-    placeholder,
-    "aria-label": ariaLabel || placeholder,
-    onFocus: () => {
-      setBorrador(crudo);
-      setFoco(true);
-    },
-    onBlur: () => {
-      setFoco(false);
-      if (borrador !== crudo) onCambio(borrador);
-    },
-    onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => setBorrador(e.target.value),
-    onKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !(multilinea && e.shiftKey)) {
-        e.preventDefault();
-        (e.target as HTMLElement).blur();
-      } else if (e.key === "Escape") {
-        setBorrador(crudo);
-        setTimeout(() => (e.target as HTMLElement).blur());
-      }
-    },
-  };
-  if (multilinea) return <AreaAutoAlto {...props} className={cn(base, "block resize-none leading-snug")} />;
-  return <input {...props} list={list} inputMode={tipo === "texto" ? undefined : "decimal"} className={base} />;
-}
-
-/** Textarea que crece en alto con su texto (sin field-sizing, que también ensancharía la columna). */
-function AreaAutoAlto(props: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  const ref = useRef<HTMLTextAreaElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, [props.value]);
-  return <textarea ref={ref} rows={1} {...props} />;
-}
-
-/* ═════════════════════════ Detalle de proyecto ═════════════════════════ */
+/* ═════════════════════════ Detalle ═════════════════════════ */
 
 type EstadoGuardado = "guardado" | "pendiente" | "guardando" | "error" | "conflicto";
 
@@ -494,13 +622,10 @@ function DetalleProyecto({
   const { toast } = useToast();
   const [p, setP] = useState<Proyecto>(inicial);
   const [estado, setEstado] = useState<EstadoGuardado>("guardado");
-  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());
-  const [q, setQ] = useState("");
-  const [soloPendientes, setSoloPendientes] = useState(false);
-  const [importPdf, setImportPdf] = useState<{ archivo: File; resultado: ResultadoPdf } | null>(null);
-  const [importXls, setImportXls] = useState<ResultadoExcel | null>(null);
+  const [importando, setImportando] = useState<{ archivo: File; resultado: ResultadoPdf } | null>(null);
   const [leyendo, setLeyendo] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
+  const [agregando, setAgregando] = useState(false);
 
   const pRef = useRef(p);
   pRef.current = p;
@@ -542,7 +667,7 @@ function DetalleProyecto({
     }
   }
 
-  // Autoguardado 1 s después del último cambio.
+  // Autoguardado: 1 s después del último cambio.
   useEffect(() => {
     if (estado !== "pendiente") return;
     const t = setTimeout(guardar, 1000);
@@ -580,53 +705,6 @@ function DetalleProyecto({
   const set = (patch: Partial<Proyecto>) => cambiar((x) => ({ ...x, ...patch }));
   const setPartida = (id: string, fn: (pa: Partida) => Partida) =>
     cambiar((x) => ({ ...x, partidas: x.partidas.map((pa) => (pa.id === id ? fn(pa) : pa)) }));
-  const toggle = (id: string) =>
-    setAbiertos((s) => {
-      const n = new Set(s);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
-
-  function agregarRenglon(sistema: string, despuesDe?: string) {
-    const nueva = nuevaPartida(sistema, p.moneda);
-    cambiar((x) => {
-      const ps = x.partidas.slice();
-      let i = despuesDe ? ps.findIndex((z) => z.id === despuesDe) : -1;
-      if (i === -1) {
-        // al final de su sistema
-        for (let k = ps.length - 1; k >= 0; k--) if (ps[k].sistema === sistema) { i = k; break; }
-      }
-      ps.splice(i === -1 ? ps.length : i + 1, 0, nueva);
-      return { ...x, partidas: ps };
-    });
-    setTimeout(() => document.querySelector<HTMLTextAreaElement>(`[data-concepto="${nueva.id}"]`)?.focus(), 50);
-  }
-
-  function duplicar(pa: Partida) {
-    const copia: Partida = {
-      ...pa,
-      id: nid(),
-      ofertas: pa.ofertas.map((o) => ({ ...o, id: nid() })),
-      elegida: "",
-    };
-    const idx = pa.ofertas.findIndex((o) => o.id === pa.elegida);
-    if (idx >= 0) copia.elegida = copia.ofertas[idx].id;
-    cambiar((x) => {
-      const ps = x.partidas.slice();
-      ps.splice(ps.findIndex((z) => z.id === pa.id) + 1, 0, copia);
-      return { ...x, partidas: ps };
-    });
-  }
-
-  function quitar(pa: Partida) {
-    if ((pa.descripcion || pa.ofertas.length) && !window.confirm(`¿Quitar el renglón "${pa.descripcion.slice(0, 60) || "sin concepto"}"?`)) return;
-    cambiar((x) => ({ ...x, partidas: x.partidas.filter((z) => z.id !== pa.id) }));
-  }
-
-  function renombrarSistema(viejo: string, nuevo: string) {
-    cambiar((x) => ({ ...x, partidas: x.partidas.map((pa) => (pa.sistema === viejo ? { ...pa, sistema: nuevo.trim() } : pa)) }));
-  }
 
   /* ── Archivos ── */
   async function onSubir(f: File, rol: Archivo["rol"]): Promise<Archivo | null> {
@@ -649,11 +727,16 @@ function DetalleProyecto({
   }
 
   async function abrirArchivo(a: Archivo) {
-    const w = window.open("", "_blank");
+    const w = window.open("", "_blank"); // se abre en el clic para que no la bloquee el navegador
     try {
       const url = URL.createObjectURL(await bajarArchivo(p.id, a));
       if (w) w.location.href = url;
-      else descargar(await bajarArchivo(p.id, a), a.nombre);
+      else {
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = a.nombre;
+        link.click();
+      }
       setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) {
       w?.close();
@@ -667,6 +750,7 @@ function DetalleProyecto({
       const res = await api(`/api/cotizaciones/${p.id}/archivos/${a.id}`, { method: "DELETE" });
       if (!res.ok && res.status !== 204) throw await errorDe(res, "No se pudo quitar.");
       setP((x) => ({ ...x, archivos: x.archivos.filter((z) => z.id !== a.id) }));
+      // las ofertas que apuntaban a ese archivo se quedan sin él
       if (p.partidas.some((pa) => pa.ofertas.some((o) => o.archivoId === a.id))) {
         cambiar((x) => ({
           ...x,
@@ -678,66 +762,54 @@ function DetalleProyecto({
     }
   }
 
-  /* ── Importar ── */
-  async function elegirImportacion(e: React.ChangeEvent<HTMLInputElement>) {
+  /* ── Importar nuestra cotización ── */
+  async function elegirPdfNuestro(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     e.target.value = "";
     if (!f) return;
+    if (f.type !== "application/pdf") {
+      toast({ title: "Tiene que ser PDF", description: "Para leer las partidas se necesita el PDF original (no foto).", variant: "destructive" });
+      return;
+    }
     setLeyendo(true);
     try {
-      if (/\.xlsx$/i.test(f.name) || f.type.includes("spreadsheet")) {
-        const { importarExcel } = await import("@/lib/excel-cotizacion");
-        const r = await importarExcel(f, p.moneda);
-        if (r.partidas.length === 0) {
-          toast({
-            title: "No encontré la tabla en el Excel",
-            description: "Necesito una fila de encabezados con Concepto, Cantidad y Precio unitario.",
-            variant: "destructive",
-          });
-        } else setImportXls(r);
-      } else if (f.type === "application/pdf") {
-        setImportPdf({ archivo: f, resultado: await leerPdf(f) });
-      } else {
-        toast({ title: "Formato no soportado", description: "Sube un Excel (.xlsx) o un PDF.", variant: "destructive" });
-      }
+      const resultado = await leerPdf(f);
+      setImportando({ archivo: f, resultado });
     } catch {
-      toast({ title: "No se pudo leer el archivo", variant: "destructive" });
+      toast({ title: "No se pudo leer el PDF", description: "Puedes capturar las partidas a mano.", variant: "destructive" });
     } finally {
       setLeyendo(false);
     }
   }
 
-  function aplicarExcel(modo: "reemplazar" | "agregar") {
-    if (!importXls) return;
-    const nuevas = importXls.partidas;
-    cambiar((x) => ({ ...x, partidas: modo === "reemplazar" ? nuevas : [...x.partidas, ...nuevas] }));
-    setImportXls(null);
-    toast({ title: `${nuevas.length} renglones importados` });
-  }
-
-  async function aplicarPdf(filas: PartidaLeida[], sistema: string, guardarPdf: boolean) {
-    if (!importPdf) return;
+  async function confirmarImportacion(filas: PartidaLeida[], guardarPdf: boolean, monedaPdf: Moneda) {
+    if (!importando) return;
     const nuevas: Partida[] = filas.map((f) => ({
-      ...nuevaPartida(sistema, p.moneda),
-      descripcion: [f.descripcion, f.modelo].filter(Boolean).join(" — "),
-      unidad: f.unidad,
+      id: nid(),
+      descripcion: f.descripcion,
+      modelo: f.modelo,
       cantidad: f.cantidad,
+      unidad: f.unidad,
       venta: f.precio,
+      costoEst: 0,
+      notas: "",
+      ofertas: [],
+      elegida: "",
     }));
-    cambiar((x) => ({ ...x, partidas: [...x.partidas, ...nuevas] }));
-    const archivo = importPdf.archivo;
-    setImportPdf(null);
-    toast({ title: `${nuevas.length} renglones agregados` });
+    cambiar((x) => ({
+      ...x,
+      moneda: x.partidas.length === 0 ? monedaPdf : x.moneda,
+      partidas: [...x.partidas, ...nuevas],
+    }));
+    const archivo = importando.archivo;
+    setImportando(null);
+    toast({ title: `${nuevas.length} partidas agregadas`, description: "Revisa que cantidades y precios estén bien." });
     if (guardarPdf) await onSubir(archivo, "nuestra");
   }
 
-  async function bajarExcel() {
-    try {
-      const { exportarExcel } = await import("@/lib/excel-cotizacion");
-      descargar(await exportarExcel(p), `${p.nombre.replace(/[\\/:*?"<>|]+/g, "-")}.xlsx`);
-    } catch {
-      toast({ title: "No se pudo generar el Excel", variant: "destructive" });
-    }
+  function agregarPartida(pa: Omit<Partida, "id" | "ofertas" | "elegida">) {
+    cambiar((x) => ({ ...x, partidas: [...x.partidas, { ...pa, id: nid(), ofertas: [], elegida: "" }] }));
+    setAgregando(false);
   }
 
   function copiar(texto: string, titulo: string) {
@@ -747,19 +819,14 @@ function DetalleProyecto({
     );
   }
 
-  const t = totalizar(p.partidas, p);
-  const grupos = agrupar(p.partidas);
+  const t = totalesProyecto(p);
   const necesitaTC = p.partidas.some((pa) => pa.ofertas.some((o) => o.moneda !== p.moneda)) && !p.tipoCambio;
-  const archivosProv = p.archivos.filter((a) => a.rol === "proveedor");
-
-  const visible = (pa: Partida) => {
-    if (soloPendientes && analizar(pa, p).costo !== null) return false;
-    if (!q.trim()) return true;
-    return coincide(`${pa.sistema} ${pa.seccion} ${pa.descripcion} ${pa.ofertas.map((o) => `${o.proveedor} ${o.notas}`).join(" ")}`, q);
-  };
+  const nuestras = p.archivos.filter((a) => a.rol === "nuestra");
+  const deProveedores = p.archivos.filter((a) => a.rol === "proveedor");
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* barra superior */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <button type="button" onClick={volver} className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-3.5 w-3.5" /> Todos los proyectos
@@ -779,225 +846,134 @@ function DetalleProyecto({
       )}
 
       {/* datos del proyecto */}
-      <div className="flex flex-wrap items-end gap-x-5 gap-y-3 rounded-sm border border-border bg-card p-4">
-        <div className="min-w-[16rem] flex-1">
-          <input
-            value={p.nombre}
-            onChange={(e) => set({ nombre: e.target.value })}
-            aria-label="Nombre del proyecto"
-            className="w-full rounded-sm bg-transparent px-1 font-heading text-2xl font-bold text-foreground outline-none hover:bg-secondary/50 focus:ring-2 focus:ring-accent"
-          />
+      <div className="rounded-sm border border-border bg-card p-5 shadow-sm md:p-6">
+        <Input
+          value={p.nombre}
+          onChange={(e) => set({ nombre: e.target.value })}
+          aria-label="Nombre del proyecto"
+          className="mb-4 h-auto border-0 bg-transparent px-0 font-heading text-2xl font-bold shadow-none focus-visible:ring-0 md:text-3xl"
+        />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
+          <Campo label="Cliente" className="col-span-2">
+            <Input value={p.cliente} onChange={(e) => set({ cliente: e.target.value })} placeholder="Opcional" />
+          </Campo>
+          <Campo label="Folio de nuestra cotización">
+            <Input value={p.folio} onChange={(e) => set({ folio: e.target.value })} placeholder="Ej. AV-118" />
+          </Campo>
+          <Campo label="Moneda de venta">
+            <Select value={p.moneda} onValueChange={(v) => set({ moneda: v as Moneda })}>
+              <SelectTrigger className="bg-background"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MXN">MXN</SelectItem>
+                <SelectItem value="USD">USD</SelectItem>
+              </SelectContent>
+            </Select>
+          </Campo>
+          <Campo label="Tipo de cambio USD">
+            <Input
+              inputMode="decimal"
+              value={p.tipoCambio ? String(p.tipoCambio) : ""}
+              onChange={(e) => set({ tipoCambio: aNumero(e.target.value) })}
+              placeholder="Ej. 18.50"
+              className={cn(necesitaTC && "border-amber-500 ring-1 ring-amber-500")}
+            />
+          </Campo>
+          <Campo label="Margen objetivo %">
+            <Input inputMode="decimal" value={String(p.margenObjetivo)} onChange={(e) => set({ margenObjetivo: aNumero(e.target.value) })} />
+          </Campo>
         </div>
-        <CampoMini label="Cliente" className="w-48">
-          <Input value={p.cliente} onChange={(e) => set({ cliente: e.target.value })} className="h-9" />
-        </CampoMini>
-        <CampoMini label="Folio cotización" className="w-32">
-          <Input value={p.folio} onChange={(e) => set({ folio: e.target.value })} className="h-9" />
-        </CampoMini>
-        <CampoMini label="Moneda venta" className="w-24">
-          <select value={p.moneda} onChange={(e) => set({ moneda: e.target.value as Moneda })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-            <option>MXN</option>
-            <option>USD</option>
-          </select>
-        </CampoMini>
-        <CampoMini label="TC USD" className="w-24">
-          <Input
-            inputMode="decimal"
-            value={p.tipoCambio ? String(p.tipoCambio) : ""}
-            onChange={(e) => set({ tipoCambio: aNumero(e.target.value) })}
-            placeholder="18.50"
-            className={cn("h-9", necesitaTC && "border-amber-500 ring-1 ring-amber-500")}
-          />
-        </CampoMini>
-        <CampoMini label="Margen obj. %" className="w-24">
-          <Input inputMode="decimal" value={String(p.margenObjetivo)} onChange={(e) => set({ margenObjetivo: aNumero(e.target.value) })} className="h-9" />
-        </CampoMini>
-        <CampoMini label="Estatus" className="w-32">
-          <select value={p.estatus} onChange={(e) => set({ estatus: e.target.value as Proyecto["estatus"] })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-            <option>Cotizando</option>
-            <option>Comprado</option>
-          </select>
-        </CampoMini>
+        {necesitaTC && (
+          <p className="mt-2 text-xs font-semibold text-amber-700">
+            Hay precios en otra moneda: pon el tipo de cambio para poder compararlos.
+          </p>
+        )}
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Select value={p.estatus} onValueChange={(v) => set({ estatus: v as Proyecto["estatus"] })}>
+            <SelectTrigger className="h-9 w-40 bg-background"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Cotizando">Cotizando</SelectItem>
+              <SelectItem value="Comprado">Comprado</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-xs text-muted-foreground">Precios unitarios sin IVA en todo el proyecto.</span>
+        </div>
       </div>
-      {necesitaTC && <p className="-mt-3 text-xs font-semibold text-amber-700">Hay costos en otra moneda: pon el tipo de cambio para sumarlos.</p>}
 
-      {/* totales */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        <Kpi etiqueta="Venta" valor={dinero(t.venta, p.moneda)} />
-        <Kpi etiqueta="Costo" valor={dinero(t.costo, p.moneda)} />
-        <Kpi etiqueta="Utilidad" valor={dinero(t.utilidad, p.moneda)} clase={colorMargen(t.margen, p.margenObjetivo)} />
+      {/* resumen */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Kpi etiqueta="Venta (nuestra cotización)" valor={dinero(t.venta, p.moneda)} />
+        <Kpi etiqueta="Costo con proveedores" valor={dinero(t.costo, p.moneda)} nota={`${t.cotizadas} de ${t.total} partidas cotizadas`} />
+        <Kpi etiqueta="Utilidad" valor={dinero(t.utilidad, p.moneda)} clase={colorMargen(t.margen, p.margenObjetivo)} nota="de las partidas cotizadas" />
         <Kpi etiqueta="Margen" valor={pct(t.margen)} clase={colorMargen(t.margen, p.margenObjetivo)} nota={`objetivo ${p.margenObjetivo}%`} />
-        <Kpi etiqueta="Con costo" valor={`${t.conCosto} / ${t.total}`} nota={t.total - t.conCosto ? `${t.total - t.conCosto} pendientes` : "todo cotizado"} />
       </div>
 
-      {/* barra de herramientas */}
-      <div className="flex flex-wrap items-center gap-2">
-        <label className={cn("inline-flex h-10 cursor-pointer items-center rounded-sm bg-primary px-4 text-sm font-bold uppercase tracking-wide text-primary-foreground hover:bg-primary/90", leyendo && "pointer-events-none opacity-60")}>
+      {/* acciones */}
+      <div className="flex flex-wrap gap-2">
+        <label className={cn("inline-flex h-10 cursor-pointer items-center rounded-sm bg-primary px-4 text-sm font-bold uppercase tracking-wide text-primary-foreground transition-colors hover:bg-primary/90", leyendo && "pointer-events-none opacity-60")}>
           {leyendo ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-          {leyendo ? "Leyendo…" : "Importar Excel o PDF"}
-          <input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/pdf" className="hidden" onChange={elegirImportacion} />
+          {leyendo ? "Leyendo PDF…" : "Importar partidas de PDF"}
+          <input type="file" accept="application/pdf" className="hidden" onChange={elegirPdfNuestro} />
         </label>
-        <Button variant="outline" onClick={bajarExcel} disabled={p.partidas.length === 0} className="h-10 rounded-sm">
-          <Download className="mr-2 h-4 w-4" /> Descargar Excel
+        <Button variant="outline" onClick={() => setAgregando(true)} className="h-10 rounded-sm">
+          <Plus className="mr-2 h-4 w-4" /> Partida a mano
         </Button>
-        <div className="relative min-w-[14rem] flex-1 md:max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filtrar conceptos o proveedores…" className="h-10 bg-background pl-9" />
-        </div>
-        <label className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Checkbox checked={soloPendientes} onCheckedChange={(v) => setSoloPendientes(!!v)} /> Solo sin costo
-        </label>
         <div className="flex flex-wrap gap-2 md:ml-auto">
-          <Button variant="outline" onClick={() => copiar(resumenTexto(p), "Resumen copiado — pégalo en el grupo")} disabled={p.partidas.length === 0} className="h-10 rounded-sm">
+          <Button variant="outline" onClick={() => copiar(resumenTexto(p), "Resumen copiado — pégalo en el grupo")} className="h-10 rounded-sm" disabled={p.partidas.length === 0}>
             <ClipboardCopy className="mr-2 h-4 w-4" /> Copiar resumen
           </Button>
           <Button asChild className="h-10 rounded-sm bg-[#25D366] font-semibold text-white hover:bg-[#1ebe5b]">
             <a href={`https://wa.me/?text=${encodeURIComponent(resumenTexto(p))}`} target="_blank" rel="noopener noreferrer">
-              <MessageCircle className="mr-2 h-4 w-4" /> WhatsApp
+              <MessageCircle className="mr-2 h-4 w-4" /> Enviar por WhatsApp
             </a>
+          </Button>
+          <Button variant="outline" onClick={() => copiar(tablaExcel(p), "Tabla copiada — pégala en Excel (celda A1)")} className="h-10 rounded-sm" disabled={p.partidas.length === 0}>
+            <ClipboardCopy className="mr-2 h-4 w-4" /> Copiar a Excel
           </Button>
         </div>
       </div>
 
-      {/* ═══════════ LA TABLA ═══════════ */}
-      {p.partidas.length === 0 ? (
+      {agregando && <FormPartida onGuardar={agregarPartida} onCancelar={() => setAgregando(false)} moneda={p.moneda} />}
+
+      {/* partidas */}
+      {p.partidas.length === 0 && !agregando ? (
         <div className="rounded-sm border border-dashed border-border bg-card px-6 py-12 text-center text-sm text-muted-foreground">
-          <FileSpreadsheet className="mx-auto mb-3 h-9 w-9 text-accent-foreground/60" />
-          Sube tu <strong className="text-foreground">Excel de cotización</strong> (mismas columnas: Sistema, Sección, Concepto, Unidad,
-          Cantidad, Precio unitario, Unidad compra, Cantidad compra, Costo unitario, Proveedor) o el PDF de nuestra cotización.
-          <div className="mt-4">
-            <Button variant="outline" onClick={() => agregarRenglon("General")} className="rounded-sm">
-              <Plus className="mr-2 h-4 w-4" /> O empieza a capturar a mano
-            </Button>
-          </div>
+          <FileText className="mx-auto mb-3 h-9 w-9 text-accent-foreground/60" />
+          Sube el PDF de <strong className="text-foreground">nuestra cotización</strong> con “Importar partidas de PDF” para
+          sacar las partidas y precios de venta automáticamente, o agrégalas a mano.
         </div>
       ) : (
-        <div className="max-h-[78vh] overflow-auto rounded-sm border border-border bg-card shadow-sm">
-          <table className="w-full min-w-[1300px] border-separate border-spacing-0 text-sm">
-            <thead className="sticky top-0 z-20">
-              <tr className="text-left text-[11px] font-bold uppercase tracking-wider">
-                <th className="w-8 border-b border-border bg-secondary" />
-                <th className="w-32 border-b border-border bg-secondary px-2 py-2 text-muted-foreground">Sección</th>
-                <th className="min-w-[13.5rem] border-b border-border bg-secondary px-2 py-2 text-muted-foreground">Concepto</th>
-                <th className="w-16 border-b border-border bg-secondary px-2 py-2 text-muted-foreground">Unidad</th>
-                <th className="min-w-[4.5rem] border-b border-border bg-secondary px-2 py-2 text-right text-muted-foreground">Cant.</th>
-                <th className="min-w-[7rem] border-b border-border bg-secondary px-2 py-2 text-right text-muted-foreground">P.U. venta</th>
-                <th className="min-w-[7rem] whitespace-nowrap border-b border-r-2 border-border border-r-primary/30 bg-secondary px-2 py-2 text-right text-muted-foreground">Subtotal venta</th>
-                <th className="min-w-[10rem] border-b-2 border-b-accent bg-secondary px-2 py-2 text-accent-foreground">Proveedor</th>
-                <th className="min-w-[4.5rem] border-b-2 border-b-accent bg-secondary px-2 py-2 text-accent-foreground">U. compra</th>
-                <th className="min-w-[4.5rem] border-b-2 border-b-accent bg-secondary px-2 py-2 text-right text-accent-foreground">Cant. compra</th>
-                <th className="min-w-[7rem] border-b-2 border-b-accent bg-secondary px-2 py-2 text-right text-accent-foreground">Costo unit.</th>
-                <th className="min-w-[7rem] whitespace-nowrap border-b-2 border-b-accent bg-secondary px-2 py-2 text-right text-accent-foreground">Subtotal costo</th>
-                                <th className="min-w-[6.5rem] border-b border-border bg-secondary px-2 py-2 text-right text-muted-foreground">Margen</th>
-                <th className="w-16 border-b border-border bg-secondary" />
-              </tr>
-            </thead>
-            <tbody>
-              {grupos.map((g) => {
-                const filas = g.partidas.filter(visible);
-                if (filas.length === 0 && (q || soloPendientes)) return null;
-                const tg = totalizar(g.partidas, p);
-                return (
-                  <Fragment key={g.sistema || "__sin__"}>
-                    <tr className="bg-primary/[0.06]">
-                      <td className="border-b border-border" />
-                      <td colSpan={5} className="border-b border-border px-1 py-1.5">
-                        <div className="flex items-center gap-2">
-                          <Celda
-                            valor={g.sistema}
-                            onCambio={(v) => renombrarSistema(g.sistema, v)}
-                            placeholder="Sistema"
-                            className="max-w-md font-heading text-sm font-bold uppercase tracking-wide text-foreground"
-                          />
-                          <span className="shrink-0 text-xs text-muted-foreground">{g.partidas.length} conceptos</span>
-                          <button
-                            type="button"
-                            onClick={() => agregarRenglon(g.sistema)}
-                            className="inline-flex shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-xs font-semibold text-muted-foreground hover:bg-secondary hover:text-foreground"
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Renglón
-                          </button>
-                        </div>
-                      </td>
-                      <td className="border-b border-r-2 border-border border-r-primary/30 px-2 py-1.5 text-right font-bold tabular-nums">{dinero(tg.venta, p.moneda)}</td>
-                      <td colSpan={4} className="border-b border-border px-2 py-1.5 text-xs text-muted-foreground">
-                        {tg.conCosto < tg.total ? `${tg.total - tg.conCosto} sin costo` : ""}
-                      </td>
-                      <td className="border-b border-border px-2 py-1.5 text-right font-bold tabular-nums">{dinero(tg.costo, p.moneda)}</td>
-                      <td className={cn("border-b border-border px-2 py-1 text-right font-bold tabular-nums", colorMargen(tg.margen, p.margenObjetivo))}>
-                        {pct(tg.margen)}
-                        <span className="block text-[11px] font-semibold">{dinero(tg.utilidad, p.moneda, 0)}</span>
-                      </td>
-                      <td className="border-b border-border" />
-                    </tr>
-                    {filas.map((pa) => (
-                      <FilaPartida
-                        key={pa.id}
-                        pa={pa}
-                        p={p}
-                        abierta={abiertos.has(pa.id)}
-                        onToggle={() => toggle(pa.id)}
-                        onCambiar={(fn) => setPartida(pa.id, fn)}
-                        onDuplicar={() => duplicar(pa)}
-                        onQuitar={() => quitar(pa)}
-                        onAgregarAbajo={() => agregarRenglon(pa.sistema, pa.id)}
-                        archivosProv={archivosProv}
-                        onSubir={(f) => onSubir(f, "proveedor")}
-                        onAbrirArchivo={abrirArchivo}
-                        subiendo={subiendo}
-                      />
-                    ))}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-            <tfoot className="sticky bottom-0 z-10">
-              <tr className="font-heading text-sm font-bold">
-                <td className="border-t-2 border-primary/40 bg-secondary" />
-                <td colSpan={5} className="border-t-2 border-primary/40 bg-secondary px-2 py-2.5 uppercase tracking-wide">
-                  Total general
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nombre = window.prompt("Nombre del nuevo sistema", "");
-                      if (nombre?.trim()) agregarRenglon(nombre.trim());
-                    }}
-                    className="ml-3 inline-flex items-center gap-1 rounded-sm px-2 py-0.5 font-sans text-xs font-semibold normal-case tracking-normal text-muted-foreground hover:bg-background hover:text-foreground"
-                  >
-                    <Plus className="h-3.5 w-3.5" /> Nuevo sistema
-                  </button>
-                </td>
-                <td className="border-r-2 border-t-2 border-primary/40 border-r-primary/30 bg-secondary px-2 py-2.5 text-right tabular-nums">{dinero(t.venta, p.moneda)}</td>
-                <td colSpan={4} className="border-t-2 border-primary/40 bg-secondary" />
-                <td className="border-t-2 border-primary/40 bg-secondary px-2 py-2.5 text-right tabular-nums">{dinero(t.costo, p.moneda)}</td>
-                <td className={cn("border-t-2 border-primary/40 bg-secondary px-2 py-1.5 text-right tabular-nums", colorMargen(t.margen, p.margenObjetivo))}>
-                  {pct(t.margen)}
-                  <span className="block font-sans text-[11px] font-semibold">{dinero(t.utilidad, p.moneda, 0)}</span>
-                </td>
-                <td className="border-t-2 border-primary/40 bg-secondary" />
-              </tr>
-            </tfoot>
-          </table>
+        <div className="space-y-4">
+          {p.partidas.map((pa, i) => (
+            <TarjetaPartida
+              key={pa.id}
+              n={i + 1}
+              pa={pa}
+              p={p}
+              archivosProv={deProveedores}
+              onCambiar={(fn) => setPartida(pa.id, fn)}
+              onQuitar={() => {
+                if (pa.ofertas.length > 0 && !window.confirm("Esta partida tiene ofertas de proveedores. ¿Quitarla de todos modos?")) return;
+                cambiar((x) => ({ ...x, partidas: x.partidas.filter((z) => z.id !== pa.id) }));
+              }}
+              onSubir={(f) => onSubir(f, "proveedor")}
+              onAbrirArchivo={abrirArchivo}
+              subiendo={subiendo}
+            />
+          ))}
         </div>
       )}
-      <p className="text-xs text-muted-foreground">
-        Precios sin IVA. Toca <ChevronRight className="inline h-3 w-3" /> en un renglón para ver y comparar varias opciones de proveedor; la que
-        marques con ✓ es la que cuenta (si no eliges, cuenta la más barata). Las celdas se guardan solas al salir de ellas.
-      </p>
 
       {/* archivos y notas */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <div className="rounded-sm border border-border bg-card p-5">
           <h3 className="mb-3 font-heading text-sm font-bold uppercase tracking-widest text-foreground">Archivos</h3>
           {p.archivos.length === 0 && <p className="mb-3 text-sm text-muted-foreground">Aún no hay archivos.</p>}
-          {(["nuestra", "proveedor"] as const).map((rol) => {
-            const lista = p.archivos.filter((a) => a.rol === rol);
-            if (!lista.length) return null;
-            return (
-              <div key={rol} className="mb-3">
-                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{rol === "nuestra" ? "Nuestra cotización" : "De proveedores"}</p>
+          {[["Nuestra cotización", nuestras], ["De proveedores", deProveedores]].map(([titulo, lista]) =>
+            (lista as Archivo[]).length > 0 ? (
+              <div key={titulo as string} className="mb-3">
+                <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{titulo as string}</p>
                 <ul className="space-y-1">
-                  {lista.map((a) => (
+                  {(lista as Archivo[]).map((a) => (
                     <li key={a.id} className="flex items-center justify-between gap-2 rounded-sm bg-secondary/40 px-3 py-1.5 text-sm">
                       <button type="button" onClick={() => abrirArchivo(a)} className="flex min-w-0 items-center gap-2 text-left hover:underline">
                         <Paperclip className="h-3.5 w-3.5 shrink-0" />
@@ -1010,8 +986,8 @@ function DetalleProyecto({
                   ))}
                 </ul>
               </div>
-            );
-          })}
+            ) : null,
+          )}
           <div className="flex flex-wrap gap-2">
             {(["nuestra", "proveedor"] as const).map((rol) => (
               <label key={rol} className={cn("inline-flex cursor-pointer items-center rounded-sm border border-dashed border-accent/60 px-3 py-2 text-xs font-semibold hover:bg-accent/10", subiendo && "pointer-events-none opacity-60")}>
@@ -1033,7 +1009,7 @@ function DetalleProyecto({
         </div>
         <div className="rounded-sm border border-border bg-card p-5">
           <h3 className="mb-3 font-heading text-sm font-bold uppercase tracking-widest text-foreground">Notas del proyecto</h3>
-          <Textarea rows={6} value={p.notas} onChange={(e) => set({ notas: e.target.value })} placeholder="Tiempos de entrega a obra, acuerdos, pendientes…" />
+          <Textarea rows={6} value={p.notas} onChange={(e) => set({ notas: e.target.value })} placeholder="Fechas de entrega a obra, acuerdos con el cliente, pendientes…" />
         </div>
       </div>
 
@@ -1043,16 +1019,12 @@ function DetalleProyecto({
         </Button>
       </div>
 
-      {importXls && (
-        <DialogoExcel resultado={importXls} p={p} onCancelar={() => setImportXls(null)} onAplicar={aplicarExcel} />
-      )}
-      {importPdf && (
-        <DialogoPdf
-          resultado={importPdf.resultado}
-          nombreArchivo={importPdf.archivo.name}
-          sistemas={grupos.map((g) => g.sistema).filter(Boolean)}
-          onCancelar={() => setImportPdf(null)}
-          onConfirmar={aplicarPdf}
+      {importando && (
+        <DialogoImportar
+          resultado={importando.resultado}
+          nombreArchivo={importando.archivo.name}
+          onCancelar={() => setImportando(null)}
+          onConfirmar={confirmarImportacion}
         />
       )}
     </div>
@@ -1082,513 +1054,508 @@ function IndicadorGuardado({ estado, onReintentar }: { estado: EstadoGuardado; o
 
 function Kpi({ etiqueta, valor, nota, clase }: { etiqueta: string; valor: string; nota?: string; clase?: string }) {
   return (
-    <div className="rounded-sm border border-border bg-card px-4 py-3">
+    <div className="rounded-sm border border-border bg-card p-4">
       <div className="text-[11px] uppercase tracking-wider text-muted-foreground">{etiqueta}</div>
-      <div className={cn("mt-0.5 truncate font-heading text-xl font-bold tabular-nums text-foreground", clase)}>{valor}</div>
-      {nota && <div className="text-xs text-muted-foreground">{nota}</div>}
+      <div className={cn("mt-1 truncate font-heading text-xl font-bold text-foreground md:text-2xl", clase)}>{valor}</div>
+      {nota && <div className="mt-0.5 text-xs text-muted-foreground">{nota}</div>}
     </div>
   );
 }
 
-function CampoMini({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+function Campo({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("space-y-1", className)}>
-      <Label className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</Label>
+    <div className={cn("space-y-1.5", className)}>
+      <Label className="text-xs font-semibold text-muted-foreground">{label}</Label>
       {children}
     </div>
   );
 }
 
-/* ═════════════════════════ Renglón ═════════════════════════ */
+/* ───────────── Partida ───────────── */
 
-function FilaPartida({
-  pa, p, abierta, onToggle, onCambiar, onDuplicar, onQuitar, onAgregarAbajo, archivosProv, onSubir, onAbrirArchivo, subiendo,
+function FormPartida({
+  inicial, moneda, onGuardar, onCancelar,
 }: {
+  inicial?: Partida;
+  moneda: Moneda;
+  onGuardar: (pa: Omit<Partida, "id" | "ofertas" | "elegida">) => void;
+  onCancelar: () => void;
+}) {
+  const [f, setF] = useState({
+    descripcion: inicial?.descripcion || "",
+    modelo: inicial?.modelo || "",
+    cantidad: inicial ? String(inicial.cantidad) : "1",
+    unidad: inicial?.unidad || "pza",
+    venta: inicial?.venta ? String(inicial.venta) : "",
+    costoEst: inicial?.costoEst ? String(inicial.costoEst) : "",
+    notas: inicial?.notas || "",
+  });
+  const s = (patch: Partial<typeof f>) => setF((x) => ({ ...x, ...patch }));
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!f.descripcion.trim()) return;
+        onGuardar({
+          descripcion: f.descripcion.trim(),
+          modelo: f.modelo.trim(),
+          cantidad: aNumero(f.cantidad),
+          unidad: f.unidad.trim(),
+          venta: aNumero(f.venta),
+          costoEst: aNumero(f.costoEst),
+          notas: f.notas,
+        });
+      }}
+      className="rounded-sm border border-accent/50 bg-card p-5 shadow-sm"
+    >
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+        <Campo label="Descripción" className="col-span-2 md:col-span-3">
+          <Input autoFocus value={f.descripcion} onChange={(e) => s({ descripcion: e.target.value })} placeholder="Ej. Unidad paquete 5 TR" />
+        </Campo>
+        <Campo label="Marca / modelo" className="col-span-2 md:col-span-3">
+          <Input value={f.modelo} onChange={(e) => s({ modelo: e.target.value })} placeholder="Opcional" />
+        </Campo>
+        <Campo label="Cantidad">
+          <Input inputMode="decimal" value={f.cantidad} onChange={(e) => s({ cantidad: e.target.value })} />
+        </Campo>
+        <Campo label="Unidad">
+          <Input list="dl-unidades" value={f.unidad} onChange={(e) => s({ unidad: e.target.value })} />
+        </Campo>
+        <Campo label={`Venta P.U. (${moneda})`}>
+          <Input inputMode="decimal" value={f.venta} onChange={(e) => s({ venta: e.target.value })} placeholder="Lo que cotizamos" />
+        </Campo>
+        <Campo label={`Costo estimado P.U.`}>
+          <Input inputMode="decimal" value={f.costoEst} onChange={(e) => s({ costoEst: e.target.value })} placeholder="Opcional" />
+        </Campo>
+        <Campo label="Notas" className="col-span-2">
+          <Input value={f.notas} onChange={(e) => s({ notas: e.target.value })} placeholder="Especificaciones a respetar…" />
+        </Campo>
+      </div>
+      <div className="mt-4 flex gap-2">
+        <Button type="submit" disabled={!f.descripcion.trim()} className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
+          <Check className="mr-2 h-4 w-4" /> {inicial ? "Guardar partida" : "Agregar partida"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
+      </div>
+    </form>
+  );
+}
+
+function TarjetaPartida({
+  n, pa, p, archivosProv, onCambiar, onQuitar, onSubir, onAbrirArchivo, subiendo,
+}: {
+  n: number;
   pa: Partida;
   p: Proyecto;
-  abierta: boolean;
-  onToggle: () => void;
-  onCambiar: (fn: (pa: Partida) => Partida) => void;
-  onDuplicar: () => void;
-  onQuitar: () => void;
-  onAgregarAbajo: () => void;
   archivosProv: Archivo[];
+  onCambiar: (fn: (pa: Partida) => Partida) => void;
+  onQuitar: () => void;
   onSubir: (f: File) => Promise<Archivo | null>;
   onAbrirArchivo: (a: Archivo) => void;
   subiendo: boolean;
 }) {
+  const [editando, setEditando] = useState(false);
+  const [nuevaOferta, setNuevaOferta] = useState(false);
+  const [editOferta, setEditOferta] = useState<string | null>(null);
   const a = analizar(pa, p);
-  const validas = pa.ofertas.filter(ofertaValida).length;
-  // Las celdas de compra editan la opción que cuenta; si no hay ninguna, la crean (y queda elegida).
-  const objetivo = a.oferta;
-  const mostrada: Oferta = objetivo || nuevaOferta(pa, p.moneda);
-  const atenuado = !!objetivo && !a.porElegida && validas > 1;
+  const ordenadas = pa.ofertas
+    .slice()
+    .sort((x, y) => (enMonedaProyecto(x, p) ?? Infinity) - (enMonedaProyecto(y, p) ?? Infinity));
 
-  function editarCompra(patch: Partial<Oferta>) {
-    onCambiar((x) => {
-      if (objetivo) {
-        return { ...x, elegida: objetivo.id, ofertas: x.ofertas.map((o) => (o.id === objetivo.id ? { ...o, ...patch } : o)) };
-      }
-      const o = { ...nuevaOferta(x, p.moneda), ...patch };
-      return { ...x, ofertas: [...x.ofertas, o], elegida: o.id };
-    });
+  if (editando) {
+    return (
+      <FormPartida
+        inicial={pa}
+        moneda={p.moneda}
+        onCancelar={() => setEditando(false)}
+        onGuardar={(d) => {
+          onCambiar((x) => ({ ...x, ...d }));
+          setEditando(false);
+        }}
+      />
+    );
   }
 
-  const set = (patch: Partial<Partida>) => onCambiar((x) => ({ ...x, ...patch }));
-  const td = "border-b border-border px-0.5 py-0.5 align-top";
-  const cu = objetivo ? (objetivo.moneda === p.moneda ? objetivo.costo : null) : null;
+  const guardarOferta = (o: Oferta) => {
+    onCambiar((x) => {
+      const existe = x.ofertas.some((z) => z.id === o.id);
+      const ofertas = existe ? x.ofertas.map((z) => (z.id === o.id ? o : z)) : [...x.ofertas, o];
+      return { ...x, ofertas };
+    });
+    setNuevaOferta(false);
+    setEditOferta(null);
+  };
 
   return (
-    <>
-      <tr className={cn("group", abierta && "bg-accent/[0.04]")}>
-        <td className={cn(td, "text-center")}>
-          <button
-            type="button"
-            onClick={onToggle}
-            aria-label={abierta ? "Ocultar opciones de proveedor" : "Ver opciones de proveedor"}
-            aria-expanded={abierta}
-            className="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-sm text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            {abierta ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-          </button>
-        </td>
-        <td className={td}>
-          <Celda valor={pa.seccion} onCambio={(v) => set({ seccion: v })} placeholder="Sección" className="text-muted-foreground" />
-        </td>
-        <td className={td}>
-          <ConceptoCelda pa={pa} onCambio={(v) => set({ descripcion: v })} />
-        </td>
-        <td className={td}>
-          <Celda valor={pa.unidad} onCambio={(v) => set({ unidad: v })} list="dl-unidades" ariaLabel="Unidad de venta" />
-        </td>
-        <td className={td}>
-          <Celda tipo="numero" valor={pa.cantidad} onCambio={(v) => set({ cantidad: aNumero(v) })} ariaLabel="Cantidad de venta" />
-        </td>
-        <td className={td}>
-          <Celda tipo="dinero" moneda={p.moneda} valor={pa.venta} onCambio={(v) => set({ venta: aNumero(v) })} ariaLabel="Precio unitario de venta" />
-        </td>
-        <td className={cn(td, "border-r-2 border-r-primary/30 px-2 py-1.5 text-right font-semibold tabular-nums")}>{dinero(a.venta, p.moneda)}</td>
-
-        {/* compra */}
-        <td className={cn(td, "bg-accent/[0.05]")}>
-          <div className="flex items-start gap-1">
-            <Celda valor={mostrada.proveedor} onCambio={(v) => editarCompra({ proveedor: v })} list="dl-proveedores" placeholder="Proveedor" atenuado={atenuado} />
-            {validas > 1 && (
-              <button
-                type="button"
-                onClick={onToggle}
-                title="Ver opciones"
-                className={cn(
-                  "mt-1 shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-bold",
-                  a.porElegida ? "bg-emerald-500/15 text-emerald-800" : "bg-amber-500/15 text-amber-800",
-                )}
-              >
-                {validas} op.
-              </button>
+    <div className={cn("rounded-sm border bg-card shadow-sm", a.porElegida ? "border-emerald-500/40" : "border-border")}>
+      {/* encabezado de la partida */}
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between md:p-5">
+        <div className="min-w-0 flex-1">
+          <p className="font-heading text-lg font-bold leading-snug text-foreground">
+            <span className="mr-2 text-muted-foreground">{n}.</span>
+            {pa.descripcion || "Sin descripción"}
+          </p>
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {[pa.modelo, `${pa.cantidad} ${pa.unidad}`, pa.notas].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <div className="flex items-start gap-4 sm:text-right">
+          <div className="flex-1 sm:flex-none">
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Venta P.U.</p>
+            <p className="font-heading font-bold text-foreground">{dinero(pa.venta, p.moneda)}</p>
+            <p className="text-xs text-muted-foreground">total {dinero(pa.venta * pa.cantidad, p.moneda)}</p>
+          </div>
+          <div>
+            <p className="text-[11px] uppercase tracking-wider text-muted-foreground">Margen</p>
+            <p className={cn("font-heading text-lg font-bold", colorMargen(a.margen, p.margenObjetivo))}>{pct(a.margen)}</p>
+            {a.utilidad !== null && (
+              <p className={cn("text-xs", colorMargen(a.margen, p.margenObjetivo))}>{dinero(a.utilidad, p.moneda)}</p>
             )}
           </div>
-        </td>
-        <td className={cn(td, "bg-accent/[0.05]")}>
-          <Celda valor={mostrada.unidad} onCambio={(v) => editarCompra({ unidad: v })} list="dl-unidades" atenuado={atenuado} ariaLabel="Unidad de compra" />
-        </td>
-        <td className={cn(td, "bg-accent/[0.05]")}>
-          <Celda tipo="numero" valor={objetivo ? mostrada.cantidad : 0} onCambio={(v) => editarCompra({ cantidad: aNumero(v) })} atenuado={atenuado} ariaLabel="Cantidad de compra" />
-        </td>
-        <td className={cn(td, "bg-accent/[0.05]")}>
-          <Celda
-            tipo="dinero"
-            moneda={mostrada.moneda}
-            valor={objetivo ? mostrada.costo : 0}
-            onCambio={(v) => editarCompra({ costo: aNumero(v) })}
-            atenuado={atenuado}
-            ariaLabel="Costo unitario"
-          />
-          {objetivo && cu === null && <p className="px-1.5 text-[10px] text-muted-foreground">{objetivo.moneda}</p>}
-        </td>
-        <td className={cn(td, "bg-accent/[0.05] px-2 py-1.5 text-right tabular-nums", atenuado && "italic text-muted-foreground")}>
-          {a.costo === null ? (objetivo ? <span className="text-xs text-amber-700">falta TC</span> : <span className="text-muted-foreground">—</span>) : dinero(a.costo, p.moneda)}
-        </td>
-        <td className={cn(td, "px-2 py-1 text-right tabular-nums", colorMargen(a.margen, p.margenObjetivo))}>
-          <span className="font-bold">{pct(a.margen)}</span>
-          {a.utilidad !== null && <span className="block text-[11px]">{dinero(a.utilidad, p.moneda, 0)}</span>}
-        </td>
-        <td className={cn(td, "whitespace-nowrap px-1 py-1")}>
-          <div className="flex justify-end opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-            <button type="button" onClick={onAgregarAbajo} title="Agregar renglón abajo" className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
-              <Plus className="h-3.5 w-3.5" />
+          <div className="flex flex-col gap-1">
+            <button type="button" onClick={() => setEditando(true)} aria-label="Editar partida" className="rounded-sm p-1.5 text-muted-foreground hover:bg-secondary hover:text-foreground">
+              <PencilLine className="h-4 w-4" />
             </button>
-            <button type="button" onClick={onDuplicar} title="Duplicar renglón" className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
-              <Copy className="h-3.5 w-3.5" />
-            </button>
-            <button type="button" onClick={onQuitar} title="Quitar renglón" className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
-              <Trash2 className="h-3.5 w-3.5" />
+            <button type="button" onClick={onQuitar} aria-label="Quitar partida" className="rounded-sm p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
-        </td>
-      </tr>
-      {abierta && (
-        <tr>
-          <td className="border-b border-border bg-accent/[0.04]" />
-          <td colSpan={13} className="border-b border-border bg-accent/[0.04] px-3 pb-4 pt-1">
-            <PanelOpciones
-              pa={pa}
-              p={p}
-              onCambiar={onCambiar}
-              archivosProv={archivosProv}
-              onSubir={onSubir}
-              onAbrirArchivo={onAbrirArchivo}
-              subiendo={subiendo}
-            />
-          </td>
-        </tr>
+        </div>
+      </div>
+      {pa.costoEst > 0 && (
+        <p className="-mt-2 px-4 pb-3 text-xs text-muted-foreground md:px-5">
+          Costo estimado al cotizar: {dinero(pa.costoEst, p.moneda)} c/u
+          {a.costoUnit !== null && (
+            <span className={a.costoUnit > pa.costoEst ? " font-semibold text-amber-700" : " font-semibold text-emerald-700"}>
+              {" "}· el proveedor sale {a.costoUnit > pa.costoEst ? "arriba" : "abajo"} por {dinero(Math.abs(a.costoUnit - pa.costoEst), p.moneda)}
+            </span>
+          )}
+        </p>
       )}
-    </>
-  );
-}
 
-function ConceptoCelda({ pa, onCambio }: { pa: Partida; onCambio: (v: string) => void }) {
-  // Celda multilínea con data-concepto para poder enfocar el renglón nuevo.
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const ta = ref.current?.querySelector("textarea");
-    if (ta) ta.dataset.concepto = pa.id;
-  }, [pa.id]);
-  return (
-    <div ref={ref}>
-      <Celda valor={pa.descripcion} onCambio={onCambio} multilinea placeholder="Concepto" ariaLabel="Concepto" />
+      {/* ofertas */}
+      <div className="border-t border-border bg-secondary/20 px-4 py-3 md:px-5">
+        {ordenadas.length === 0 && !nuevaOferta && (
+          <p className="py-1 text-sm text-muted-foreground">Sin precios de proveedores todavía.</p>
+        )}
+        {ordenadas.length > 0 && (
+          <div className="mb-2 hidden grid-cols-[2rem_minmax(0,1.6fr)_minmax(0,1.2fr)_minmax(0,1fr)_6rem_4.5rem] gap-3 px-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground md:grid">
+            <span />
+            <span>Proveedor</span>
+            <span className="text-right">Precio P.U.</span>
+            <span>Entrega</span>
+            <span className="text-right">Margen</span>
+            <span />
+          </div>
+        )}
+        <div className="space-y-1.5">
+          {ordenadas.map((o) =>
+            editOferta === o.id ? (
+              <FormOferta
+                key={o.id}
+                inicial={o}
+                p={p}
+                pa={pa}
+                archivosProv={archivosProv}
+                onSubir={onSubir}
+                subiendo={subiendo}
+                onGuardar={guardarOferta}
+                onCancelar={() => setEditOferta(null)}
+              />
+            ) : (
+              <FilaOferta
+                key={o.id}
+                o={o}
+                p={p}
+                pa={pa}
+                elegida={pa.elegida === o.id}
+                masBarata={a.masBarata === o.id && ordenadas.length > 1}
+                archivo={archivosProv.find((z) => z.id === o.archivoId) || null}
+                onElegir={() => onCambiar((x) => ({ ...x, elegida: x.elegida === o.id ? "" : o.id }))}
+                onEditar={() => setEditOferta(o.id)}
+                onQuitar={() => onCambiar((x) => ({ ...x, ofertas: x.ofertas.filter((z) => z.id !== o.id), elegida: x.elegida === o.id ? "" : x.elegida }))}
+                onAbrirArchivo={onAbrirArchivo}
+              />
+            ),
+          )}
+        </div>
+        {nuevaOferta ? (
+          <FormOferta
+            p={p}
+            pa={pa}
+            archivosProv={archivosProv}
+            onSubir={onSubir}
+            subiendo={subiendo}
+            onGuardar={guardarOferta}
+            onCancelar={() => setNuevaOferta(false)}
+          />
+        ) : (
+          <Button variant="ghost" size="sm" onClick={() => setNuevaOferta(true)} className="mt-1 rounded-sm font-semibold text-foreground">
+            <Plus className="mr-1.5 h-4 w-4" /> Agregar precio de proveedor
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
 
-/* ═════════════════════════ Opciones de proveedor ═════════════════════════ */
+function FilaOferta({
+  o, p, pa, elegida, masBarata, archivo, onElegir, onEditar, onQuitar, onAbrirArchivo,
+}: {
+  o: Oferta;
+  p: Proyecto;
+  pa: Partida;
+  elegida: boolean;
+  masBarata: boolean;
+  archivo: Archivo | null;
+  onElegir: () => void;
+  onEditar: () => void;
+  onQuitar: () => void;
+  onAbrirArchivo: (a: Archivo) => void;
+}) {
+  const c = enMonedaProyecto(o, p);
+  const m = c !== null && pa.venta > 0 ? (pa.venta - c) / pa.venta : null;
+  return (
+    <div
+      className={cn(
+        "grid grid-cols-[2rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 rounded-sm px-2 py-2 text-sm md:grid-cols-[2rem_minmax(0,1.6fr)_minmax(0,1.2fr)_minmax(0,1fr)_6rem_4.5rem]",
+        elegida ? "bg-emerald-500/10 ring-1 ring-emerald-500/40" : "bg-card",
+      )}
+    >
+      <button
+        type="button"
+        onClick={onElegir}
+        title={elegida ? "Quitar como elegido" : "Elegir este proveedor"}
+        aria-pressed={elegida}
+        className={cn(
+          "row-span-2 flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors md:row-span-1",
+          elegida ? "border-emerald-600 bg-emerald-600 text-white" : "border-muted-foreground/40 hover:border-emerald-600",
+        )}
+      >
+        {elegida && <Check className="h-3.5 w-3.5" />}
+      </button>
+      <div className="min-w-0">
+        <p className="truncate font-semibold text-foreground">
+          {o.proveedor || "Proveedor"}
+          {masBarata && <span className="ml-2 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-800">Más barato</span>}
+        </p>
+        {(o.notas || archivo) && (
+          <p className="truncate text-xs text-muted-foreground">
+            {archivo && (
+              <button type="button" onClick={() => onAbrirArchivo(archivo)} className="mr-2 inline-flex items-center gap-1 underline underline-offset-2 hover:text-foreground">
+                <Paperclip className="h-3 w-3" /> PDF
+              </button>
+            )}
+            {o.notas}
+          </p>
+        )}
+      </div>
+      <div className="text-right">
+        <p className="font-heading font-bold text-foreground">{dinero(o.precio, o.moneda)}</p>
+        {o.moneda !== p.moneda && <p className="text-xs text-muted-foreground">{c === null ? "falta tipo de cambio" : `≈ ${dinero(c, p.moneda)}`}</p>}
+      </div>
+      <p className="col-start-2 flex items-center gap-1 text-xs text-muted-foreground md:col-start-auto md:text-sm">
+        <Truck className="h-3.5 w-3.5 shrink-0 md:hidden" />
+        {o.entrega || "—"}
+      </p>
+      <p className={cn("text-right font-heading font-bold", colorMargen(m, p.margenObjetivo))}>{pct(m)}</p>
+      <div className="col-start-3 row-start-1 hidden justify-end gap-0.5 md:col-start-auto md:row-start-auto md:flex">
+        <button type="button" onClick={onEditar} aria-label="Editar precio" className="rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
+          <PencilLine className="h-4 w-4" />
+        </button>
+        <button type="button" onClick={onQuitar} aria-label="Quitar precio" className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      {/* móvil: acciones en una línea aparte */}
+      <div className="col-span-3 flex justify-end gap-3 text-xs md:hidden">
+        <button type="button" onClick={onEditar} className="font-semibold text-muted-foreground">Editar</button>
+        <button type="button" onClick={onQuitar} className="font-semibold text-muted-foreground">Quitar</button>
+      </div>
+    </div>
+  );
+}
 
+/** Lecturas de PDF de proveedores ya hechas en esta sesión (por id de archivo). */
 const cacheLecturas = new Map<string, ResultadoPdf>();
 
-function PanelOpciones({
-  pa, p, onCambiar, archivosProv, onSubir, onAbrirArchivo, subiendo,
+function FormOferta({
+  inicial, p, pa, archivosProv, onSubir, subiendo, onGuardar, onCancelar,
 }: {
-  pa: Partida;
+  inicial?: Oferta;
   p: Proyecto;
-  onCambiar: (fn: (pa: Partida) => Partida) => void;
+  pa: Partida;
   archivosProv: Archivo[];
   onSubir: (f: File) => Promise<Archivo | null>;
-  onAbrirArchivo: (a: Archivo) => void;
   subiendo: boolean;
+  onGuardar: (o: Oferta) => void;
+  onCancelar: () => void;
 }) {
-  const a = analizar(pa, p);
-  const [lectura, setLectura] = useState<{ ofertaId: string; r: ResultadoPdf } | null>(null);
-  const [leyendo, setLeyendo] = useState("");
+  const [f, setF] = useState({
+    proveedor: inicial?.proveedor || "",
+    precio: inicial?.precio ? String(inicial.precio) : "",
+    moneda: (inicial?.moneda || p.moneda) as Moneda,
+    entrega: inicial?.entrega || "",
+    notas: inicial?.notas || "",
+    archivoId: inicial?.archivoId || "",
+  });
+  const [lectura, setLectura] = useState<ResultadoPdf | null>(null);
+  const [leyendo, setLeyendo] = useState(false);
+  const s = (patch: Partial<typeof f>) => setF((x) => ({ ...x, ...patch }));
 
-  const setOferta = (id: string, patch: Partial<Oferta>) =>
-    onCambiar((x) => ({ ...x, ofertas: x.ofertas.map((o) => (o.id === id ? { ...o, ...patch } : o)) }));
-
-  function agregar() {
-    const base = a.oferta;
-    const o = { ...nuevaOferta(pa, p.moneda), unidad: base?.unidad || pa.unidad, cantidad: base?.cantidad || pa.cantidad };
-    onCambiar((x) => ({ ...x, ofertas: [...x.ofertas, o] }));
-    setTimeout(() => document.querySelector<HTMLInputElement>(`[data-oferta="${o.id}"] input`)?.focus(), 50);
-  }
-
-  async function leer(ofertaId: string, arch: Archivo, file?: File) {
-    if (arch.tipo !== "application/pdf") return;
-    const enCache = cacheLecturas.get(arch.id);
-    if (enCache) return setLectura({ ofertaId, r: enCache });
-    setLeyendo(ofertaId);
+  async function leer(a: Archivo, file?: File) {
+    if (a.tipo !== "application/pdf") return;
+    const enCache = cacheLecturas.get(a.id);
+    if (enCache) return setLectura(enCache);
+    setLeyendo(true);
     try {
-      const r = await leerPdf(file || (await bajarArchivo(p.id, arch)));
-      cacheLecturas.set(arch.id, r);
-      setLectura({ ofertaId, r });
+      const blob = file || (await bajarArchivo(p.id, a));
+      const r = await leerPdf(blob);
+      cacheLecturas.set(a.id, r);
+      setLectura(r);
     } catch {
       setLectura(null);
     } finally {
-      setLeyendo("");
+      setLeyendo(false);
     }
   }
 
+  async function elegirArchivo(id: string) {
+    s({ archivoId: id });
+    setLectura(null);
+    const a = archivosProv.find((z) => z.id === id);
+    if (a) leer(a);
+  }
+
+  async function subirNuevo(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const a = await onSubir(file);
+    if (a) {
+      s({ archivoId: a.id });
+      leer(a, file);
+    }
+  }
+
+  // Precios del PDF ordenados por parecido con la partida (las palabras en común primero).
   const sugerencias = useMemo(() => {
     if (!lectura) return [];
-    const palabras = normalizar(pa.descripcion).split(" ").filter((w) => w.length > 2);
-    return lectura.r.partidas
+    const palabras = normalizar(`${pa.descripcion} ${pa.modelo}`).split(" ").filter((w) => w.length > 2);
+    return lectura.partidas
       .filter((x) => x.precio > 0)
-      .map((x) => ({ x, puntos: palabras.filter((w) => normalizar(`${x.descripcion} ${x.modelo}`).includes(w)).length }))
-      .sort((m, n) => n.puntos - m.puntos)
+      .map((x) => {
+        const t = normalizar(`${x.descripcion} ${x.modelo}`);
+        return { x, puntos: palabras.filter((w) => t.includes(w)).length };
+      })
+      .sort((a, b) => b.puntos - a.puntos)
       .slice(0, 6);
-  }, [lectura, pa.descripcion]);
-
-  const ordenadas = pa.ofertas.slice().sort((x, y) => (costoTotal(x, p) ?? Infinity) - (costoTotal(y, p) ?? Infinity));
-  const th = "px-1.5 py-1.5 text-left text-[10px] font-bold uppercase tracking-wider text-muted-foreground";
+  }, [lectura, pa.descripcion, pa.modelo]);
 
   return (
-    // w-0 min-w-full: el panel ocupa el ancho de la tabla sin ensancharla; si no cabe, se desplaza solo él.
-    <div className="w-0 min-w-full overflow-x-auto rounded-sm border border-accent/30 bg-card">
-      <div className="flex min-w-[64rem] flex-wrap items-center justify-between gap-2 border-b border-border px-3 py-2">
-        <p className="text-xs font-bold uppercase tracking-wider text-foreground">
-          Opciones de proveedor <span className="font-normal normal-case tracking-normal text-muted-foreground">— marca con ✓ la preferida</span>
-        </p>
-        <div className="flex min-w-[18rem] flex-1 items-center gap-2 md:max-w-md">
-          <span className="shrink-0 text-xs text-muted-foreground">Notas:</span>
-          <Celda valor={pa.notas} onCambio={(v) => onCambiar((x) => ({ ...x, notas: v }))} placeholder="Especificación a respetar, marca similar…" className="border border-border" />
-        </div>
-      </div>
-      <table className="w-full min-w-[64rem] text-sm">
-        <thead>
-          <tr className="border-b border-border">
-            <th className="w-10" />
-            <th className={cn(th, "min-w-[12rem]")}>Proveedor</th>
-            <th className={cn(th, "w-20")}>U. compra</th>
-            <th className={cn(th, "w-20 text-right")}>Cant.</th>
-            <th className={cn(th, "w-28 text-right")}>Costo unit.</th>
-            <th className={cn(th, "w-20")}>Moneda</th>
-            <th className={cn(th, "w-32 text-right")}>Subtotal ({p.moneda})</th>
-            <th className={cn(th, "w-20 text-right")}>Margen</th>
-            <th className={cn(th, "w-32")}>Entrega</th>
-            <th className={cn(th, "min-w-[10rem]")}>Notas</th>
-            <th className={cn(th, "w-48")}>PDF</th>
-            <th className="w-8" />
-          </tr>
-        </thead>
-        <tbody>
-          {ordenadas.map((o) => {
-            const c = costoTotal(o, p);
-            const m = c !== null && a.venta > 0 ? (a.venta - c) / a.venta : null;
-            const elegida = pa.elegida === o.id;
-            const arch = archivosProv.find((z) => z.id === o.archivoId) || null;
-            return (
-              <Fragment key={o.id}>
-                <tr data-oferta={o.id} className={cn("border-b border-border/60 align-top", elegida && "bg-emerald-500/10")}>
-                  <td className="px-2 py-1.5 text-center">
-                    <button
-                      type="button"
-                      onClick={() => onCambiar((x) => ({ ...x, elegida: x.elegida === o.id ? "" : o.id }))}
-                      title={elegida ? "Quitar como preferida" : "Elegir como preferida"}
-                      aria-pressed={elegida}
-                      className={cn(
-                        "inline-flex h-6 w-6 items-center justify-center rounded-full border-2 transition-colors",
-                        elegida ? "border-emerald-600 bg-emerald-600 text-white" : "border-muted-foreground/40 hover:border-emerald-600",
-                      )}
-                    >
-                      {elegida && <Check className="h-3.5 w-3.5" />}
-                    </button>
-                  </td>
-                  <td className="py-0.5">
-                    <div className="flex items-center gap-1">
-                      <Celda valor={o.proveedor} onCambio={(v) => setOferta(o.id, { proveedor: v })} list="dl-proveedores" placeholder="Proveedor" />
-                      {a.masBarata === o.id && (
-                        <span className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-800">Más barato</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="py-0.5"><Celda valor={o.unidad} onCambio={(v) => setOferta(o.id, { unidad: v })} list="dl-unidades" ariaLabel="Unidad de compra" /></td>
-                  <td className="py-0.5"><Celda tipo="numero" valor={o.cantidad} onCambio={(v) => setOferta(o.id, { cantidad: aNumero(v) })} ariaLabel="Cantidad de compra" /></td>
-                  <td className="py-0.5"><Celda tipo="dinero" moneda={o.moneda} valor={o.costo} onCambio={(v) => setOferta(o.id, { costo: aNumero(v) })} ariaLabel="Costo unitario" /></td>
-                  <td className="py-0.5">
-                    <select
-                      value={o.moneda}
-                      onChange={(e) => setOferta(o.id, { moneda: e.target.value as Moneda })}
-                      aria-label="Moneda"
-                      className="w-full rounded-sm bg-transparent px-1 py-1 text-sm hover:bg-secondary/60 focus:outline-none focus:ring-2 focus:ring-accent"
-                    >
-                      <option>MXN</option>
-                      <option>USD</option>
-                    </select>
-                  </td>
-                  <td className="px-1.5 py-1.5 text-right tabular-nums">{c === null ? <span className="text-xs text-amber-700">falta TC</span> : dinero(c, p.moneda)}</td>
-                  <td className={cn("px-1.5 py-1.5 text-right font-bold tabular-nums", colorMargen(m, p.margenObjetivo))}>{pct(m)}</td>
-                  <td className="py-0.5"><Celda valor={o.entrega} onCambio={(v) => setOferta(o.id, { entrega: v })} placeholder="Ej. 2 semanas" ariaLabel="Entrega" /></td>
-                  <td className="py-0.5"><Celda valor={o.notas} onCambio={(v) => setOferta(o.id, { notas: v })} placeholder="Marca, garantía, flete…" ariaLabel="Notas" multilinea /></td>
-                  <td className="px-1 py-1">
-                    <div className="flex items-center gap-1">
-                      {/* <select> nativo: el de Radix se resetea cuando aparece la opción recién subida */}
-                      <select
-                        value={o.archivoId}
-                        onChange={(e) => {
-                          setOferta(o.id, { archivoId: e.target.value });
-                          const z = archivosProv.find((q) => q.id === e.target.value);
-                          if (z) leer(o.id, z);
-                        }}
-                        aria-label="PDF del proveedor"
-                        className="min-w-0 flex-1 truncate rounded-sm border border-border bg-background px-1 py-1 text-xs"
-                      >
-                        <option value="">Sin PDF</option>
-                        {archivosProv.map((z) => <option key={z.id} value={z.id}>{z.nombre}</option>)}
-                      </select>
-                      {arch && (
-                        <button type="button" onClick={() => onAbrirArchivo(arch)} title="Abrir PDF" className="shrink-0 rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground">
-                          <Paperclip className="h-3.5 w-3.5" />
-                        </button>
-                      )}
-                      <label title="Subir PDF del proveedor" className={cn("shrink-0 cursor-pointer rounded-sm p-1 text-muted-foreground hover:bg-secondary hover:text-foreground", subiendo && "pointer-events-none opacity-50")}>
-                        {subiendo || leyendo === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileUp className="h-3.5 w-3.5" />}
-                        <input
-                          type="file"
-                          accept="application/pdf,image/jpeg,image/png,image/webp"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const f = e.target.files?.[0];
-                            e.target.value = "";
-                            if (!f) return;
-                            const z = await onSubir(f);
-                            if (z) {
-                              setOferta(o.id, { archivoId: z.id });
-                              leer(o.id, z, f);
-                            }
-                          }}
-                        />
-                      </label>
-                    </div>
-                  </td>
-                  <td className="px-1 py-1">
-                    <button
-                      type="button"
-                      onClick={() => onCambiar((x) => ({ ...x, ofertas: x.ofertas.filter((z) => z.id !== o.id), elegida: x.elegida === o.id ? "" : x.elegida }))}
-                      title="Quitar opción"
-                      className="rounded-sm p-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </td>
-                </tr>
-                {lectura?.ofertaId === o.id && (
-                  <tr className="border-b border-border/60">
-                    <td />
-                    <td colSpan={11} className="px-1.5 pb-2">
-                      {sugerencias.length ? (
-                        <>
-                          <p className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Precios en el PDF — toca uno para usarlo como costo unitario</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {sugerencias.map(({ x }, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onClick={() => {
-                                  setOferta(o.id, { costo: x.precio, moneda: lectura.r.moneda });
-                                  setLectura(null);
-                                }}
-                                className="max-w-full rounded-sm border border-border bg-secondary/40 px-2 py-1 text-left text-xs hover:border-accent"
-                              >
-                                <span className="font-bold">{dinero(x.precio, lectura.r.moneda)}</span>{" "}
-                                <span className="text-muted-foreground">{(x.descripcion || x.modelo).slice(0, 60)}</span>
-                              </button>
-                            ))}
-                            <button type="button" onClick={() => setLectura(null)} className="px-2 text-xs text-muted-foreground underline">cerrar</button>
-                          </div>
-                        </>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">No encontré precios en ese PDF; captúralo a mano.</p>
-                      )}
-                    </td>
-                  </tr>
-                )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-      <div className="px-2 py-2">
-        <Button variant="ghost" size="sm" onClick={agregar} className="rounded-sm font-semibold text-foreground">
-          <Plus className="mr-1.5 h-4 w-4" /> Agregar opción de proveedor
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/* ═════════════════════════ Diálogos de importación ═════════════════════════ */
-
-function DialogoExcel({
-  resultado, p, onCancelar, onAplicar,
-}: {
-  resultado: ResultadoExcel;
-  p: Proyecto;
-  onCancelar: () => void;
-  onAplicar: (modo: "reemplazar" | "agregar") => void;
-}) {
-  const grupos = agrupar(resultado.partidas);
-  const t = totalizar(resultado.partidas, p);
-  return (
-    <Dialog open onOpenChange={(o) => !o && onCancelar()}>
-      <DialogContent className="max-w-2xl rounded-sm">
-        <DialogHeader>
-          <DialogTitle>Importar Excel</DialogTitle>
-          <DialogDescription>
-            Encontré {resultado.partidas.length} conceptos en {resultado.hojas.map((h) => `“${h.nombre}” (${h.renglones})`).join(" y ")}.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="overflow-hidden rounded-sm border border-border">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-secondary/60 text-left text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                <th className="px-3 py-2">Sistema</th>
-                <th className="px-3 py-2 text-right">Conceptos</th>
-                <th className="px-3 py-2 text-right">Venta</th>
-                <th className="px-3 py-2 text-right">Costo</th>
-                <th className="px-3 py-2 text-right">Margen</th>
-              </tr>
-            </thead>
-            <tbody>
-              {grupos.map((g) => {
-                const tg = totalizar(g.partidas, p);
-                return (
-                  <tr key={g.sistema} className="border-t border-border">
-                    <td className="px-3 py-1.5 font-semibold">{g.sistema || "—"}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{g.partidas.length}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{dinero(tg.venta, p.moneda)}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{dinero(tg.costo, p.moneda)}</td>
-                    <td className="px-3 py-1.5 text-right tabular-nums">{pct(tg.margen)}</td>
-                  </tr>
-                );
-              })}
-              <tr className="border-t-2 border-border font-bold">
-                <td className="px-3 py-1.5">Total</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{t.total}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{dinero(t.venta, p.moneda)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{dinero(t.costo, p.moneda)}</td>
-                <td className="px-3 py-1.5 text-right tabular-nums">{pct(t.margen)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          El proveedor y costo de cada renglón quedan como su opción elegida. Después puedes agregar más opciones para comparar.
-        </p>
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
-          {p.partidas.length > 0 && (
-            <Button variant="outline" onClick={() => onAplicar("agregar")} className="rounded-sm">
-              Agregar al final
-            </Button>
-          )}
-          <Button
-            onClick={() => {
-              if (p.partidas.length > 0 && !window.confirm(`Esto reemplaza los ${p.partidas.length} renglones actuales. ¿Seguro?`)) return;
-              onAplicar("reemplazar");
-            }}
-            className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90"
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!f.proveedor.trim() && !f.precio) return;
+        onGuardar({
+          id: inicial?.id || nid(),
+          proveedor: f.proveedor.trim(),
+          precio: aNumero(f.precio),
+          moneda: f.moneda,
+          entrega: f.entrega.trim(),
+          notas: f.notas.trim(),
+          archivoId: f.archivoId,
+        });
+      }}
+      className="mt-2 rounded-sm border border-accent/50 bg-card p-3"
+    >
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_5.5rem_minmax(0,1fr)]">
+        <Input list="dl-proveedores" autoFocus placeholder="Proveedor" value={f.proveedor} onChange={(e) => s({ proveedor: e.target.value })} className="col-span-2 md:col-span-1" aria-label="Proveedor" />
+        <Input inputMode="decimal" placeholder="Precio unitario sin IVA" value={f.precio} onChange={(e) => s({ precio: e.target.value })} aria-label="Precio unitario" />
+        <Select value={f.moneda} onValueChange={(v) => s({ moneda: v as Moneda })}>
+          <SelectTrigger className="bg-background" aria-label="Moneda"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="MXN">MXN</SelectItem>
+            <SelectItem value="USD">USD</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input placeholder="Entrega (ej. 2 semanas)" value={f.entrega} onChange={(e) => s({ entrega: e.target.value })} className="col-span-2 md:col-span-1" aria-label="Tiempo de entrega" />
+        <Input placeholder="Notas (garantía, flete, marca…)" value={f.notas} onChange={(e) => s({ notas: e.target.value })} className="col-span-2 md:col-span-2" aria-label="Notas" />
+        <div className="col-span-2 flex items-center gap-2">
+          {/* <select> nativo a propósito: el Select de Radix se resetea cuando la opción recién subida aparece en la lista */}
+          <select
+            value={f.archivoId}
+            onChange={(e) => (e.target.value ? elegirArchivo(e.target.value) : s({ archivoId: "" }))}
+            aria-label="Cotización del proveedor"
+            className="h-10 min-w-0 flex-1 truncate rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
-            {p.partidas.length > 0 ? "Reemplazar todo" : `Importar ${t.total} conceptos`}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            <option value="">Sin PDF del proveedor</option>
+            {archivosProv.map((a) => (
+              <option key={a.id} value={a.id}>{a.nombre}</option>
+            ))}
+          </select>
+          <label className={cn("inline-flex h-10 shrink-0 cursor-pointer items-center rounded-sm border border-dashed border-accent/60 px-3 text-xs font-semibold hover:bg-accent/10", subiendo && "pointer-events-none opacity-60")}>
+            {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
+            <span className="ml-1.5 hidden sm:inline">Subir PDF</span>
+            <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" className="hidden" onChange={subirNuevo} />
+          </label>
+        </div>
+      </div>
+
+      {leyendo && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+          <Loader2 className="h-3.5 w-3.5 animate-spin" /> Buscando precios en el PDF…
+        </p>
+      )}
+      {sugerencias.length > 0 && (
+        <div className="mt-2">
+          <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Precios encontrados en el PDF — toca uno para usarlo</p>
+          <div className="flex flex-wrap gap-1.5">
+            {sugerencias.map(({ x }, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => s({ precio: String(x.precio), moneda: lectura!.moneda })}
+                className="max-w-full rounded-sm border border-border bg-secondary/40 px-2 py-1 text-left text-xs hover:border-accent"
+              >
+                <span className="font-bold">{dinero(x.precio, lectura!.moneda)}</span>{" "}
+                <span className="text-muted-foreground">{(x.descripcion || x.modelo).slice(0, 60)}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+      {lectura && sugerencias.length === 0 && !leyendo && (
+        <p className="mt-2 text-xs text-muted-foreground">No se encontraron precios en ese PDF; captúralo a mano.</p>
+      )}
+
+      <div className="mt-3 flex gap-2">
+        <Button type="submit" size="sm" disabled={!f.proveedor.trim() && !f.precio} className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90">
+          <Check className="mr-1.5 h-4 w-4" /> {inicial ? "Guardar" : "Agregar"}
+        </Button>
+        <Button type="button" size="sm" variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
+      </div>
+    </form>
   );
 }
+
+/* ───────────── Importar partidas del PDF ───────────── */
 
 interface FilaImport extends PartidaLeida {
   incluir: boolean;
 }
 
-function DialogoPdf({
-  resultado, nombreArchivo, sistemas, onCancelar, onConfirmar,
+function DialogoImportar({
+  resultado, nombreArchivo, onCancelar, onConfirmar,
 }: {
   resultado: ResultadoPdf;
   nombreArchivo: string;
-  sistemas: string[];
   onCancelar: () => void;
-  onConfirmar: (filas: PartidaLeida[], sistema: string, guardarPdf: boolean) => void;
+  onConfirmar: (filas: PartidaLeida[], guardarPdf: boolean, moneda: Moneda) => void;
 }) {
   const [filas, setFilas] = useState<FilaImport[]>(resultado.partidas.map((x) => ({ ...x, incluir: true })));
   const [guardarPdf, setGuardarPdf] = useState(true);
-  const [sistema, setSistema] = useState(sistemas[0] || "General");
+  const [moneda, setMoneda] = useState<Moneda>(resultado.moneda);
   const setFila = (i: number, patch: Partial<FilaImport>) => setFilas((fs) => fs.map((x, k) => (k === i ? { ...x, ...patch } : x)));
   const elegidas = filas.filter((x) => x.incluir && x.descripcion.trim());
   const total = elegidas.reduce((s, x) => s + x.cantidad * x.precio, 0);
@@ -1597,52 +1564,68 @@ function DialogoPdf({
     <Dialog open onOpenChange={(o) => !o && onCancelar()}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto rounded-sm">
         <DialogHeader>
-          <DialogTitle>Conceptos encontrados en el PDF</DialogTitle>
-          <DialogDescription>{nombreArchivo} — revisa y corrige antes de agregarlos. Los precios son los de venta.</DialogDescription>
+          <DialogTitle>Partidas encontradas en el PDF</DialogTitle>
+          <DialogDescription>
+            {nombreArchivo} — revisa y corrige antes de agregarlas. Los precios son los de venta (lo que cotizamos al cliente).
+          </DialogDescription>
         </DialogHeader>
+
         {filas.length === 0 ? (
           <div className="rounded-sm border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-            No encontré conceptos con precio en este PDF (puede ser un escaneo). Captúralos en la tabla o sube el Excel.
+            No se encontraron partidas con precio en este PDF (puede ser un escaneo o un formato raro). Agrégalas a mano con
+            “Partida a mano”.
           </div>
         ) : (
           <>
             {!resultado.conEncabezado && (
               <p className="rounded-sm bg-amber-500/10 px-3 py-2 text-xs text-amber-900">
-                No reconocí la tabla del PDF; estos conceptos se adivinaron por renglones con precio. Revísalos con cuidado.
+                No se reconoció la tabla del PDF; estas partidas se adivinaron por renglones con precio. Revísalas con cuidado.
               </p>
             )}
+            <div className="hidden grid-cols-[1.5rem_minmax(0,1fr)_5rem_4.5rem_7.5rem] gap-2 text-[11px] font-bold uppercase tracking-wider text-muted-foreground md:grid">
+              <span />
+              <span>Descripción</span>
+              <span>Cant.</span>
+              <span>Unidad</span>
+              <span>Venta P.U.</span>
+            </div>
             <div className="space-y-2">
               {filas.map((x, i) => (
-                <div key={i} className={cn("grid grid-cols-[1.5rem_minmax(0,1fr)_5rem_4.5rem_7.5rem] items-center gap-2", !x.incluir && "opacity-40")}>
-                  <Checkbox checked={x.incluir} onCheckedChange={(v) => setFila(i, { incluir: !!v })} aria-label="Incluir" />
-                  <Input value={x.descripcion} onChange={(e) => setFila(i, { descripcion: e.target.value })} aria-label="Concepto" />
+                <div key={i} className={cn("grid grid-cols-[1.5rem_1fr_1fr_1fr] items-center gap-2 md:grid-cols-[1.5rem_minmax(0,1fr)_5rem_4.5rem_7.5rem]", !x.incluir && "opacity-40")}>
+                  <Checkbox checked={x.incluir} onCheckedChange={(v) => setFila(i, { incluir: !!v })} aria-label="Incluir partida" className="row-span-2 md:row-span-1" />
+                  <Input value={x.descripcion} onChange={(e) => setFila(i, { descripcion: e.target.value })} className="col-span-3 md:col-span-1" aria-label="Descripción" />
                   <Input inputMode="decimal" value={String(x.cantidad)} onChange={(e) => setFila(i, { cantidad: aNumero(e.target.value) })} aria-label="Cantidad" />
                   <Input value={x.unidad} onChange={(e) => setFila(i, { unidad: e.target.value })} aria-label="Unidad" />
-                  <Input inputMode="decimal" value={String(x.precio)} onChange={(e) => setFila(i, { precio: aNumero(e.target.value) })} aria-label="Precio unitario" />
+                  <Input inputMode="decimal" value={String(x.precio)} onChange={(e) => setFila(i, { precio: aNumero(e.target.value) })} aria-label="Precio de venta unitario" />
                 </div>
               ))}
             </div>
             <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3 text-sm">
               <label className="flex items-center gap-2">
-                Sistema:
-                <Input list="dl-sistemas-pdf" value={sistema} onChange={(e) => setSistema(e.target.value)} className="h-9 w-48" />
-                <datalist id="dl-sistemas-pdf">{sistemas.map((s) => <option key={s} value={s} />)}</datalist>
+                <Checkbox checked={guardarPdf} onCheckedChange={(v) => setGuardarPdf(!!v)} /> Guardar el PDF en los archivos del proyecto
               </label>
-              <label className="flex items-center gap-2">
-                <Checkbox checked={guardarPdf} onCheckedChange={(v) => setGuardarPdf(!!v)} /> Guardar el PDF en archivos
-              </label>
-              <span className="font-heading font-bold">Subtotal {dinero(total, resultado.moneda)}</span>
+              <div className="flex items-center gap-3">
+                <Select value={moneda} onValueChange={(v) => setMoneda(v as Moneda)}>
+                  <SelectTrigger className="h-9 w-24 bg-background"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MXN">MXN</SelectItem>
+                    <SelectItem value="USD">USD</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="font-heading font-bold">Subtotal {dinero(total, moneda)}</span>
+              </div>
             </div>
           </>
         )}
+
         <DialogFooter>
           <Button variant="outline" onClick={onCancelar} className="rounded-sm">Cancelar</Button>
           <Button
             disabled={elegidas.length === 0}
-            onClick={() => onConfirmar(elegidas.map(({ incluir: _i, ...r }) => r), sistema.trim() || "General", guardarPdf)}
+            onClick={() => onConfirmar(elegidas.map(({ incluir: _i, ...r }) => r), guardarPdf, moneda)}
             className="rounded-sm bg-accent font-bold uppercase tracking-wide text-accent-foreground hover:bg-accent/90"
           >
-            Agregar {elegidas.length} conceptos
+            Agregar {elegidas.length} partidas
           </Button>
         </DialogFooter>
       </DialogContent>
