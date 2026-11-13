@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { Reveal } from "@/components/motion/Reveal";
 import { getSession, saveSession, clearSession } from "@/lib/portal-auth";
-import { Lock, LogOut, Receipt, ArrowRight, Loader2, LayoutGrid, ClipboardCheck, FileSpreadsheet } from "lucide-react";
+import { Lock, LogOut, Receipt, ArrowRight, Loader2, LayoutGrid, ClipboardCheck } from "lucide-react";
 
 export default function Portal() {
   useSeo({
@@ -195,26 +195,6 @@ export default function Portal() {
                 </Reveal>
 
                 <Reveal delay={0.19}>
-                  <Link href="/portal/cotizaciones" className="group block h-full">
-                    <div className="flex h-full flex-col rounded-sm border border-accent/25 bg-primary/40 p-7 shadow-xl backdrop-blur-sm transition-all duration-300 hover:-translate-y-1 hover:border-accent/60">
-                      <div className="mb-5 flex items-center justify-between">
-                        <span className="inline-flex h-12 w-12 items-center justify-center rounded-sm bg-accent text-accent-foreground">
-                          <FileSpreadsheet className="h-6 w-6" />
-                        </span>
-                        <ArrowRight className="h-5 w-5 text-white/40 transition-all group-hover:translate-x-1 group-hover:text-accent" />
-                      </div>
-                      <h2 className="font-heading text-xl font-bold uppercase text-white">
-                        Cotizaciones
-                      </h2>
-                      <p className="mt-2 flex-grow text-sm leading-relaxed text-primary-foreground/60">
-                        Guarda las cotizaciones de materiales y equipos por proyecto y proveedor, con su
-                        PDF, y busca qué se cotizó, a quién y a qué precio.
-                      </p>
-                    </div>
-                  </Link>
-                </Reveal>
-
-                <Reveal delay={0.26}>
                   <div className="flex h-full flex-col rounded-sm border border-dashed border-white/20 bg-primary/20 p-7">
                     <span className="mb-5 inline-flex h-12 w-12 items-center justify-center rounded-sm border border-white/20 text-white/50">
                       <LayoutGrid className="h-6 w-6" />
