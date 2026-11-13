@@ -204,11 +204,11 @@ export default function Portal() {
                         <ArrowRight className="h-5 w-5 text-white/40 transition-all group-hover:translate-x-1 group-hover:text-accent" />
                       </div>
                       <h2 className="font-heading text-xl font-bold uppercase text-white">
-                        Compras de proyecto
+                        Cotizaciones
                       </h2>
                       <p className="mt-2 flex-grow text-sm leading-relaxed text-primary-foreground/60">
-                        Presupuesto vs. costo real: registra las cotizaciones de proveedores, compáralas y
-                        adjudica la mejor. Avance y margen de cada proyecto.
+                        Sube nuestra cotización de un proyecto, agrega los precios de cada proveedor y
+                        compara contra el margen. Resumen listo para mandar al grupo.
                       </p>
                     </div>
                   </Link>
