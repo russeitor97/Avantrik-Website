@@ -25,11 +25,16 @@ export const PAGES = {
   hvac: { es: "/hvac-industrial", en: "/en/industrial-hvac" },
   electrical: { es: "/ingenieria-electrica", en: "/en/electrical-engineering" },
   geothermal: { es: "/geotermia", en: "/en/geothermal-systems" },
-  ducts: { es: "/ductos-lamina-galvanizada", en: "/en/sheet-metal-ducts" },
+  products: { es: "/productos", en: "/en/products" },
   privacy: { es: "/aviso-de-privacidad", en: "/en/privacy-policy" },
 } as const;
 
 export type PageKey = keyof typeof PAGES;
+
+/** Ruta de la ficha de un producto: /productos/codo-90 · /en/products/codo-90 */
+export function productPath(slug: string, lang: Lang): string {
+  return `${PAGES.products[lang]}/${slug}`;
+}
 
 /** Quita la barra final para comparar rutas ("/en/" y "/en" son la misma). */
 function normalize(path: string): string {
@@ -75,10 +80,13 @@ export function useLangSwitch(): { target: Lang; href: string; label: string } {
   const match = (Object.keys(PAGES) as PageKey[]).find(
     (key) => normalize(PAGES[key][lang]) === current,
   );
+  // Fichas de producto: el slug es el mismo en ambos idiomas.
+  const prefijo = `${PAGES.products[lang]}/`;
+  const slug = current.startsWith(prefijo) ? current.slice(prefijo.length) : "";
 
   return {
     target,
-    href: match ? PAGES[match][target] : PAGES.home[target],
+    href: slug ? productPath(slug, target) : match ? PAGES[match][target] : PAGES.home[target],
     label: target === "en" ? "EN" : "ES",
   };
 }

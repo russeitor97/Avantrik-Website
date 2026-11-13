@@ -20,7 +20,7 @@ const NAV: { page: PageKey; es: string; en: string }[] = [
   { page: "about", es: "Nosotros", en: "About" },
   { page: "audits", es: "Auditorías", en: "Audits" },
   { page: "hvac", es: "HVAC", en: "HVAC" },
-  { page: "ducts", es: "Ductos", en: "Ducts" },
+  { page: "products", es: "Productos", en: "Products" },
   { page: "electrical", es: "Eléctrica", en: "Electrical" },
   { page: "geothermal", es: "Geotermia", en: "Geothermal" },
   { page: "calculator", es: "Calculadora", en: "Calculator" },
@@ -133,7 +133,7 @@ export function Navbar() {
           {/* Desktop Nav */}
           <div className="hidden items-center gap-3.5 xl:flex 2xl:gap-5">
             {navLinks.map((link) => {
-              const active = location === link.href;
+              const active = location === link.href || location.startsWith(`${link.href}/`);
               return (
                 <Link
                   key={link.href}

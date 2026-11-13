@@ -36,7 +36,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Send, Loader2 } from "lucide-react";
 import emailjs from "@emailjs/browser";
 import { useLang } from "@/lib/i18n";
-import { quoteOptions } from "@/lib/ductos";
+import { quoteOptions } from "@/lib/productos";
 
 const EMAILJS_SERVICE_ID = "service_wjgwyix";
 const EMAILJS_TEMPLATE_ID = "template_mwz95cv";

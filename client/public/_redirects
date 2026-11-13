@@ -10,6 +10,10 @@
 /services/electrical-engineering /ingenieria-electrica       301
 /services/geothermal-systems     /geotermia                  301
 
+# Catálogo de ductos: la página anterior pasó a /productos
+/ductos-lamina-galvanizada   /productos      301
+/en/sheet-metal-ducts        /en/products    301
+
 # === URLs VIEJAS DE WIX → PÁGINAS REALES (301) ===
 /acerca-de-nosotros                          /about              301
 /geotermia-empresarial                       /geotermia          301

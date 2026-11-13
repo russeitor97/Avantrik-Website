@@ -14,6 +14,8 @@ interface HeroSectionProps {
   ctaLink?: string;
   secondaryCtaText?: string;
   secondaryCtaLink?: string;
+  /** Degradado inferior hacia el fondo claro. Se apaga si lo que sigue es oscuro. */
+  fade?: boolean;
 }
 
 const T = {
@@ -40,6 +42,7 @@ export function HeroSection({
   ctaLink,
   secondaryCtaText,
   secondaryCtaLink,
+  fade = true,
 }: HeroSectionProps) {
   const reduce = useReducedMotion();
   const lang = useLang();
@@ -124,7 +127,7 @@ export function HeroSection({
       </div>
 
       {/* Bottom fade into page */}
-      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />
+      {fade && <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-background to-transparent" />}
     </section>
   );
 }

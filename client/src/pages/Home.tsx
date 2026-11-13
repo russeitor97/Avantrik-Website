@@ -3,6 +3,7 @@ import { Seo } from "@/components/Seo";
 import { HeroSection } from "@/components/ui/hero-section";
 import { ServiceCard } from "@/components/ui/service-card";
 import { CalculatorHero } from "@/components/home/CalculatorHero";
+import { CatalogoInicio } from "@/components/home/CatalogoInicio";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatCounter } from "@/components/ui/stat-counter";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
@@ -162,7 +163,10 @@ export default function Home() {
         ctaText={t.heroCta}
         ctaLink={href("contact")}
         secondaryCtaText={t.heroSecondaryCta}
+        fade={false}
       />
+
+      <CatalogoInicio />
 
       {/* Intro Section */}
       <section className="py-20 bg-background">
