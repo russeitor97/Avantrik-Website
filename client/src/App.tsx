@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { useLang } from "@/lib/i18n";
@@ -22,6 +22,8 @@ const ElectricalEngineering = lazy(
 const GeothermalSystems = lazy(
   () => import("@/pages/Services/GeothermalSystems"),
 );
+const Productos = lazy(() => import("@/pages/Productos"));
+const Producto = lazy(() => import("@/pages/Producto"));
 // Portal interno (noindex, fuera del sitemap)
 const Privacy = lazy(() => import("@/pages/Privacy"));
 const Portal = lazy(() => import("@/pages/Portal"));
@@ -60,6 +62,10 @@ function Router() {
         <Route path="/hvac-industrial" component={IndustrialHVAC} />
         <Route path="/ingenieria-electrica" component={ElectricalEngineering} />
         <Route path="/geotermia" component={GeothermalSystems} />
+        <Route path="/productos" component={Productos} />
+        <Route path="/productos/:slug" component={Producto} />
+        {/* URL anterior del catálogo (también tiene 301 en _redirects) */}
+        <Route path="/ductos-lamina-galvanizada"><Redirect to="/productos" replace /></Route>
         <Route path="/aviso-de-privacidad" component={Privacy} />
 
         {/* Versión en inglés — mismos componentes, el idioma sale de la URL
@@ -73,6 +79,9 @@ function Router() {
         <Route path="/en/industrial-hvac" component={IndustrialHVAC} />
         <Route path="/en/electrical-engineering" component={ElectricalEngineering} />
         <Route path="/en/geothermal-systems" component={GeothermalSystems} />
+        <Route path="/en/products" component={Productos} />
+        <Route path="/en/products/:slug" component={Producto} />
+        <Route path="/en/sheet-metal-ducts"><Redirect to="/en/products" replace /></Route>
         <Route path="/en/privacy-policy" component={Privacy} />
 
         {/* Portal interno (privado, noindex) */}

@@ -5,6 +5,7 @@ import { useHref, useLang, type PageKey } from "@/lib/i18n";
 import logo from "@assets/Logo_Avantrik_sin_texto_1767166358111.png";
 
 const serviceLinks: { page: PageKey; es: string; en: string }[] = [
+  { page: "products", es: "Ductos galvanizados", en: "Galvanized duct" },
   { page: "audits", es: "Auditorías Energéticas", en: "Energy Audits" },
   { page: "hvac", es: "HVAC", en: "HVAC" },
   { page: "electrical", es: "Ingeniería Eléctrica", en: "Electrical Engineering" },
