@@ -192,15 +192,6 @@
     animation: dash-flow 24s linear infinite;
   }
 
-  /* Hilera de fotos que se desplaza sola (la pista lleva las fotos dos veces) */
-  @keyframes marquee {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-  .animate-marquee { animation: marquee var(--marquee-duracion, 60s) linear infinite; }
-  .pausa-al-pasar:hover .animate-marquee,
-  .pausa-al-pasar:focus-within .animate-marquee { animation-play-state: paused; }
-
   /* Barra del PageLoader (code-splitting) */
   @keyframes loader-slide {
     0% { transform: translateX(-100%); }
@@ -217,8 +208,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .animate-float-slow,
-  .animate-dash-flow,
-  .animate-marquee {
+  .animate-dash-flow {
     animation: none !important;
   }
 }
