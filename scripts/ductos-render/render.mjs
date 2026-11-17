@@ -43,9 +43,8 @@ const origen = `http://127.0.0.1:${servidor.address().port}`;
 
 
 const pedidas = process.argv.slice(2);
-const nombres = pedidas.length ? pedidas.filter((n) => n !== "familia" && n !== "plano") : await listar();
+const nombres = pedidas.length ? pedidas.filter((n) => n !== "familia") : await listar();
 const conFamilia = !pedidas.length || pedidas.includes("familia");
-const conPlano = !pedidas.length || pedidas.includes("plano");
 
 async function listar() {
   const src = fs.readFileSync(path.join(libreria, "piezas.js"), "utf8");
@@ -60,15 +59,14 @@ const navegador = await puppeteer.launch({
 });
 fs.mkdirSync(salida, { recursive: true });
 
-async function tomar(consulta, w, h, archivo, pagina0 = "escena.html") {
+async function tomar(consulta, w, h, archivo) {
   const pagina = await navegador.newPage();
   pagina.on("pageerror", (e) => console.error("  error en la escena:", e.message));
   pagina.on("console", (m) => m.type() === "error" && console.error("  consola:", m.text()));
   await pagina.setViewport({ width: w, height: h, deviceScaleFactor: 1 });
-  await pagina.goto(`${origen}/${pagina0}?${consulta}&w=${w}&h=${h}`);
+  await pagina.goto(`${origen}/escena.html?${consulta}&w=${w}&h=${h}`);
   await pagina.waitForFunction("window.__listo === true", { timeout: 60000 });
-  fs.mkdirSync(path.dirname(path.join(salida, archivo)), { recursive: true });
-  await pagina.screenshot({ path: path.join(salida, archivo), type: "webp", quality: 88, omitBackground: pagina0 !== "escena.html" });
+  await pagina.screenshot({ path: path.join(salida, archivo), type: "webp", quality: 88 });
   await pagina.close();
   console.log("✓", archivo);
 }
@@ -76,7 +74,6 @@ async function tomar(consulta, w, h, archivo, pagina0 = "escena.html") {
 try {
   for (const n of nombres) await tomar(`pieza=${n}`, 1200, 900, `${n}.webp`);
   if (conFamilia) await tomar("familia=1", 2400, 1100, "catalogo.webp");
-  if (conPlano) await tomar("", 2400, 1200, "../fondos/plano.webp", "plano.html"); // fondo de las bandas oscuras
 } finally {
   await navegador.close();
   servidor.close();

@@ -160,7 +160,7 @@ export function CalculatorHero() {
               <p className="text-xs uppercase tracking-wide font-medium text-primary-foreground/60 mb-1">
                 {t.couldSave}
               </p>
-              <p className="font-heading text-2xl md:text-3xl font-bold text-accent whitespace-nowrap">
+              <p className="font-heading text-2xl md:text-3xl font-bold text-accent text-glow-accent whitespace-nowrap">
                 {fmt(savingsLow)} — {fmt(savingsHigh)}
               </p>
               <p className="mt-1 text-xs text-primary-foreground/50">
