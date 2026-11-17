@@ -78,7 +78,7 @@ export default function IndustrialHVAC() {
       page="hvac"
       copy={useCopy(T)}
       cardIcons={[Fan, Thermometer]}
-      heroImage={FOTOS.azotea}
+      heroImage={FOTOS.manejadora}
       gallery={GALERIA_HVAC}
     />
   );

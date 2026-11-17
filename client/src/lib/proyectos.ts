@@ -57,7 +57,7 @@ export const GALERIA_INICIO: Foto[] = [
 
 /** Página de HVAC industrial. */
 export const GALERIA_HVAC: Foto[] = [
-  FOTOS.manejadora,
+  FOTOS.azotea,
   FOTOS.cuartoBombas,
   FOTOS.tecnicoAzotea,
   FOTOS.limpiezaSerpentin,
