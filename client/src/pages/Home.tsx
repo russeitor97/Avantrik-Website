@@ -4,6 +4,8 @@ import { HeroSection } from "@/components/ui/hero-section";
 import { ServiceCard } from "@/components/ui/service-card";
 import { CalculatorHero } from "@/components/home/CalculatorHero";
 import { CatalogoInicio } from "@/components/home/CatalogoInicio";
+import { TrabajoEnCampo } from "@/components/home/TrabajoEnCampo";
+import { FOTOS, srcGrande } from "@/lib/proyectos";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatCounter } from "@/components/ui/stat-counter";
 import { Reveal, Stagger, StaggerItem } from "@/components/motion/Reveal";
@@ -194,10 +196,15 @@ export default function Home() {
             </Reveal>
             <Reveal delay={0.15} className="w-full md:w-1/2">
               <div className="relative h-[400px] bg-secondary/30 rounded-sm overflow-hidden border border-border">
-                <div className="absolute inset-0 bg-tech-grid opacity-70" />
-                <div className="absolute inset-0 bg-brand-glow" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="text-center p-8 bg-background/85 backdrop-blur-sm border border-border shadow-lg rounded-sm max-w-xs">
+                <img
+                  src={srcGrande(FOTOS.cuartoBombas)}
+                  alt={FOTOS.cuartoBombas[lang]}
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div className="absolute inset-0 flex items-end p-5">
+                    <div className="text-center px-6 py-4 bg-background/90 border border-border shadow-lg rounded-sm">
                         <div className="text-5xl font-heading font-bold text-accent mb-2">
                           <StatCounter to={35} suffix="%" />
                         </div>
@@ -233,6 +240,9 @@ export default function Home() {
           </Stagger>
         </div>
       </section>
+
+      {/* Fotos reales de obra */}
+      <TrabajoEnCampo />
 
       {/* Why Avantrik — credentials */}
       <section className="py-20 bg-background">
