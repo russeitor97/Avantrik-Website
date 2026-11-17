@@ -160,6 +160,7 @@ export default function Home() {
       <Seo page="home" title={t.title} description={t.description} />
 
       <HeroSection
+        image="/proyectos/02-manejadora-azotea-2000.webp"
         title={t.heroTitle}
         subtitle={t.heroSubtitle}
         ctaText={t.heroCta}
