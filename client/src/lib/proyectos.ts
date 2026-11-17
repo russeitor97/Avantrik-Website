@@ -45,14 +45,20 @@ export const srcGrande = (f: Foto) => `/proyectos/${f.archivo}.webp`;
 export const srcChica = (f: Foto) => `/proyectos/${f.archivo}-800.webp`;
 export const textoFoto = (f: Foto, lang: Lang) => f[lang];
 
-/** Selección para el inicio. */
+/** Hilera que se desplaza en el inicio. */
 export const GALERIA_INICIO: Foto[] = [
   FOTOS.manejadora,
   FOTOS.cuartoBombas,
   FOTOS.maniobra,
   FOTOS.tecnicoSerpentin,
   FOTOS.condensadora,
+  FOTOS.cabezales,
+  FOTOS.limpiezaSerpentin,
   FOTOS.bombaAguaHelada,
+  FOTOS.tuberiaAislada,
+  FOTOS.equipoMuro,
+  FOTOS.recirculacion,
+  FOTOS.serpentin,
 ];
 
 /** Página de HVAC industrial. */

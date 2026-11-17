@@ -1,43 +1,63 @@
-import { Link } from "wouter";
-import { ArrowRight } from "lucide-react";
-import { GaleriaFotos } from "@/components/proyectos/GaleriaFotos";
-import { GALERIA_INICIO } from "@/lib/proyectos";
-import { useHref, useLang } from "@/lib/i18n";
+import { useState } from "react";
+import { VisorFotos } from "@/components/proyectos/GaleriaFotos";
+import { GALERIA_INICIO, srcChica } from "@/lib/proyectos";
+import { useLang } from "@/lib/i18n";
 
 const T = {
-  es: {
-    eyebrow: "Trabajo en campo",
-    title: "Así trabajamos",
-    body: "Fotos reales de instalaciones y mantenimientos de HVAC, agua helada y bombeo hechos por nuestro equipo.",
-    mas: "Ver más trabajos de HVAC",
-  },
-  en: {
-    eyebrow: "Field work",
-    title: "How we work",
-    body: "Real photos of HVAC, chilled water and pumping installations and maintenance done by our team.",
-    mas: "See more HVAC work",
-  },
+  es: { titulo: "Algunos de nuestros trabajos", ver: "Ver foto" },
+  en: { titulo: "Some of our work", ver: "View photo" },
 };
 
-/** Galería de fotos reales de obra en el inicio. */
+/**
+ * Hilera de fotos reales que se desplaza sola (se pausa al pasar el mouse).
+ * Las fotos van dos veces seguidas para que el recorrido no tenga corte.
+ * Con "reducir movimiento" activado no se mueve y se puede deslizar a mano.
+ */
 export function TrabajoEnCampo() {
-  const t = T[useLang()];
-  const href = useHref();
+  const lang = useLang();
+  const t = T[lang];
+  const [abierta, setAbierta] = useState<number | null>(null);
+  const fotos = GALERIA_INICIO;
+
   return (
-    <section className="bg-background py-20">
+    <section className="overflow-hidden bg-background py-16 md:py-20">
       <div className="container mx-auto px-4">
-        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-2xl">
-            <p className="mb-2 text-sm font-bold uppercase tracking-widest text-accent">{t.eyebrow}</p>
-            <h2 className="text-3xl font-heading font-bold text-foreground md:text-4xl">{t.title}</h2>
-            <p className="mt-3 text-lg text-muted-foreground">{t.body}</p>
-          </div>
-          <Link href={href("hvac")} className="inline-flex shrink-0 items-center gap-2 font-semibold text-primary hover:text-accent">
-            {t.mas} <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-        <GaleriaFotos fotos={GALERIA_INICIO} />
+        <h2 className="mb-8 text-3xl font-heading font-bold text-foreground md:text-4xl">{t.titulo}</h2>
       </div>
+
+      <div className="pausa-al-pasar overflow-x-auto [scrollbar-width:none] motion-safe:overflow-hidden [mask-image:linear-gradient(to_right,transparent,black_4%,black_96%,transparent)]">
+        <ul
+          className="animate-marquee flex w-max gap-4"
+          style={{ ["--marquee-duracion" as string]: `${fotos.length * 5}s` }}
+        >
+          {[...fotos, ...fotos].map((f, i) => {
+            const real = i % fotos.length;
+            const copia = i >= fotos.length;
+            return (
+              <li key={`${f.archivo}-${i}`} aria-hidden={copia || undefined}>
+                <button
+                  type="button"
+                  tabIndex={copia ? -1 : 0}
+                  onClick={() => setAbierta(real)}
+                  aria-label={`${t.ver}: ${f[lang]}`}
+                  className="block overflow-hidden rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                >
+                  <img
+                    src={srcChica(f)}
+                    alt={copia ? "" : f[lang]}
+                    loading="lazy"
+                    decoding="async"
+                    style={{ aspectRatio: `${f.ancho} / ${f.alto}` }}
+                    className="h-56 w-auto object-cover transition-transform duration-500 hover:scale-[1.03] md:h-72"
+                  />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+
+      <VisorFotos fotos={fotos} abierta={abierta} setAbierta={setAbierta} />
     </section>
   );
 }
