@@ -1248,17 +1248,53 @@ function collectCurrentForm(){
 // ============================================================
 // FOTOS
 // ============================================================
+// Las fotos se guardan dentro del reporte en la nube (Firestore), así que se
+// comprimen al agregarlas: lado mayor 1280 px, JPEG ~72 %. Una foto de celular
+// de 3-5 MB queda en ~100-150 KB y caben varias por reporte (límite 1 MB/doc).
+const FOTO_LADO_MAX = 1280, FOTO_CALIDAD = 0.72;
+function comprimirFoto(dataUrl){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = ()=>{
+      const k = Math.min(1, FOTO_LADO_MAX/Math.max(img.width,img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width*k); c.height = Math.round(img.height*k);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      resolve(c.toDataURL('image/jpeg',FOTO_CALIDAD));
+    };
+    img.onerror = ()=>resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
 function addPhotos(input){
   Array.from(input.files).forEach(file=>{
     const reader = new FileReader();
-    reader.onload = e=>{
+    reader.onload = async e=>{
       const caption = prompt('Descripción de la foto (opcional):','')||'';
-      currentPhotos.push({data:e.target.result,caption});
+      currentPhotos.push({data:await comprimirFoto(e.target.result),caption});
       renderPhotoGrid();
     };
     reader.readAsDataURL(file);
   });
   input.value='';
+}
+
+// Fotos que se suben a la nube con el reporte. Firestore admite 1 MB por
+// documento: se guardan completas mientras quepan (~900 KB en total) y las que
+// no, solo con su descripción (siguen en este dispositivo).
+const FOTOS_MAX_BYTES = 900000;
+function fotosParaNube(data){
+  const sinFotos = JSON.stringify({...data, photos:[]}).length;
+  let usado = sinFotos, fuera = 0;
+  const photos = (data.photos||[]).map(p=>{
+    const d = p.data||'';
+    if(d && usado + d.length < FOTOS_MAX_BYTES){ usado += d.length; return {data:d, caption:p.caption||''}; }
+    if(d) fuera++;
+    return {caption:p.caption||''};
+  });
+  if(fuera) setTimeout(()=>showToast(`⚠ ${fuera} foto(s) no cupieron en la nube; quedan solo en este dispositivo`),3000);
+  return photos;
 }
 
 function renderPhotoGrid(){
@@ -1311,7 +1347,7 @@ async function _ejecutarGuardado(data){
         data.clienteId = data.clienteId || existing.clienteId || null;
         data.cotId = data.cotId || existing.cotId || null;
       }
-      const dataToSave = {...data, photos:(data.photos||[]).map(p=>({caption:p.caption||''}))};
+      const dataToSave = {...data, photos:fotosParaNube(data)};
       await db.collection('reportes').doc(editingFireId).set(dataToSave);
       const idx = savedReports.findIndex(x=>x._fireId===editingFireId);
       if(idx!==-1) savedReports[idx]={...data,_fireId:editingFireId};
@@ -1322,7 +1358,7 @@ async function _ejecutarGuardado(data){
       // Quedarse en el formulario, no navegar
       return;
     } else {
-      const dataToSave = {...data, photos:(data.photos||[]).map(p=>({caption:p.caption||''}))};
+      const dataToSave = {...data, photos:fotosParaNube(data)};
       const ref = await db.collection('reportes').add(dataToSave);
       data._fireId = ref.id;
       savedReports.unshift(data);
@@ -1350,7 +1386,10 @@ function mergeLocalPhotos(){
     const lp = JSON.parse(localStorage.getItem('avantrik_photos_v3')||'[]');
     lp.forEach(lph=>{
       const r = savedReports.find(x=>x._fireId===lph.id);
-      if(r && lph.photos?.length) r.photos=lph.photos;
+      // La copia de la nube manda; la local solo rellena reportes viejos cuyas
+      // fotos nunca se subieron.
+      const enNube = (r?.photos||[]).some(p=>p.data);
+      if(r && !enNube && lph.photos?.some(p=>p.data)) r.photos=lph.photos;
     });
   }catch(e){}
 }
