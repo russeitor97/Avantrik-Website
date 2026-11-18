@@ -6,6 +6,7 @@ import { TarjetaProducto } from "@/components/productos/TarjetaProducto";
 import { JsonLd } from "@/components/productos/JsonLd";
 import { CALIBRES, ESPECIFICACION, PRODUCTOS } from "@/lib/productos";
 import { SITE_URL, productPath, useLang } from "@/lib/i18n";
+import { FOTOS, srcGrande } from "@/lib/proyectos";
 
 const T = {
   es: {
@@ -19,6 +20,9 @@ const T = {
     gaugeH2: "Calibres",
     gaugeCols: ["Calibre", "Espesor (mm)", "Espesor (pulg)"],
     gaugeNote: "Espesor nominal de lámina galvanizada. El calibre de cada ducto se define según su sección y la presión del sistema.",
+    disenoH2: "Diseñamos la red antes de fabricar",
+    disenoBody:
+      "Modelamos la ductería en 3D con las medidas de cada tramo para revisar recorridos, conexiones y espacios antes de cortar la lámina. Así cada pieza llega a obra lista para montarse.",
     otherH2: "¿Necesita una pieza que no está aquí?",
     otherBody: "La fabricamos con su plano o con las medidas de obra. Mándenos lo que necesita en el formulario.",
     formH2: "Solicitar cotización",
@@ -34,6 +38,9 @@ const T = {
     gaugeH2: "Gauges",
     gaugeCols: ["Gauge", "Thickness (mm)", "Thickness (in)"],
     gaugeNote: "Nominal galvanized sheet thickness. The gauge for each duct is set by its size and the system pressure.",
+    disenoH2: "We design the system before we fabricate",
+    disenoBody:
+      "We model the ductwork in 3D with the size of every run to check routing, connections and clearances before cutting any sheet metal, so each piece arrives on site ready to install.",
     otherH2: "Need a part that isn't listed?",
     otherBody: "We make it from your drawing or site measurements. Tell us what you need in the form.",
     formH2: "Request a quote",
@@ -87,6 +94,24 @@ export default function Productos() {
               </li>
             ))}
           </ul>
+        </div>
+      </section>
+
+      <section className="border-b border-border py-16">
+        <div className="container mx-auto grid items-center gap-10 px-4 lg:grid-cols-[1.3fr_1fr]">
+          <img
+            src={srcGrande(FOTOS.diseno3d)}
+            alt={FOTOS.diseno3d[lang]}
+            width={FOTOS.diseno3d.ancho}
+            height={FOTOS.diseno3d.alto}
+            loading="lazy"
+            decoding="async"
+            className="h-auto w-full rounded-sm border border-border"
+          />
+          <div>
+            <h2 className="text-2xl md:text-3xl">{t.disenoH2}</h2>
+            <p className="mt-4 leading-relaxed text-muted-foreground">{t.disenoBody}</p>
+          </div>
         </div>
       </section>
 

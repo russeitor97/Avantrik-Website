@@ -14,7 +14,9 @@ import { Link } from "wouter";
 import { CheckCircle } from "lucide-react";
 import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { Reveal } from "@/components/motion/Reveal";
-import { useHref, type PageKey } from "@/lib/i18n";
+import { useHref, useLang, type PageKey } from "@/lib/i18n";
+import { GaleriaFotos } from "@/components/proyectos/GaleriaFotos";
+import { srcGrande, type Foto } from "@/lib/proyectos";
 
 export interface ServiceCopy {
   title: string;
@@ -36,17 +38,41 @@ interface Props {
   copy: ServiceCopy;
   /** Un icono por tarjeta, en el mismo orden que `copy.cards`. */
   cardIcons: LucideIcon[];
+  /** Foto real de fondo para la portada (si no hay, se usa el fondo técnico). */
+  heroImage?: Foto;
+  /** Galería de trabajos reales al final de la página. */
+  gallery?: Foto[];
 }
 
-export function ServicePageTemplate({ page, copy, cardIcons }: Props) {
+const TG = {
+  es: { eyebrow: "Trabajo en campo", title: "Trabajos recientes", body: "Fotos de nuestros servicios de instalación y mantenimiento." },
+  en: { eyebrow: "Field work", title: "Recent work", body: "Photos from our installation and maintenance jobs." },
+};
+
+export function ServicePageTemplate({ page, copy, cardIcons, heroImage, gallery }: Props) {
   const href = useHref();
+  const lang = useLang();
+  const tg = TG[lang];
 
   return (
     <Layout>
       <Seo page={page} title={copy.title} description={copy.description} />
 
       <div className="relative flex h-[52vh] min-h-[420px] items-center overflow-hidden bg-ink-gradient">
-        <TechBackdrop />
+        {heroImage ? (
+          <>
+            <img
+              src={srcGrande(heroImage)}
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
+              {...{ fetchpriority: "high" }}
+            />
+            {/* Oscurece más el lado del texto para que se lea sobre cualquier foto */}
+            <div className="absolute inset-0 bg-ink/75 md:bg-transparent md:bg-gradient-to-r md:from-ink/90 md:via-ink/70 md:to-ink/30" />
+          </>
+        ) : (
+          <TechBackdrop />
+        )}
         <div className="container mx-auto px-4 relative z-10 pt-24">
             <h1 className="text-4xl md:text-6xl font-heading font-bold text-white mb-4">{copy.heroTitle}</h1>
             <p className="text-xl text-gray-200 max-w-2xl">
@@ -99,6 +125,17 @@ export function ServicePageTemplate({ page, copy, cardIcons }: Props) {
           </div>
         </div>
       </section>
+
+      {gallery && gallery.length > 0 && (
+        <section className="border-t border-border bg-secondary/40 py-16">
+          <div className="container mx-auto px-4">
+            <p className="mb-2 text-sm font-bold uppercase tracking-widest text-accent">{tg.eyebrow}</p>
+            <h2 className="text-3xl font-heading font-bold text-foreground">{tg.title}</h2>
+            <p className="mb-8 mt-2 text-muted-foreground">{tg.body}</p>
+            <GaleriaFotos fotos={gallery} columnas={4} />
+          </div>
+        </section>
+      )}
     </Layout>
   );
 }

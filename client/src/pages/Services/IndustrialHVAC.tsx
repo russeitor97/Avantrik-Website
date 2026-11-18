@@ -1,6 +1,7 @@
 import { Thermometer, Fan } from "lucide-react";
 import { ServicePageTemplate, type ServiceCopy } from "@/components/services/ServicePageTemplate";
 import { useCopy, type Lang } from "@/lib/i18n";
+import { FOTOS, GALERIA_HVAC } from "@/lib/proyectos";
 
 const T: Record<Lang, ServiceCopy> = {
   es: {
@@ -77,6 +78,8 @@ export default function IndustrialHVAC() {
       page="hvac"
       copy={useCopy(T)}
       cardIcons={[Fan, Thermometer]}
+      heroImage={FOTOS.manejadora}
+      gallery={GALERIA_HVAC}
     />
   );
 }

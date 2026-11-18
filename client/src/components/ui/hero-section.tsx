@@ -6,7 +6,7 @@ import { TechBackdrop } from "@/components/ui/tech-backdrop";
 import { useHref, useLang } from "@/lib/i18n";
 
 interface HeroSectionProps {
-  /** Optional — kept for API compatibility; no longer rendered as a raster image. */
+  /** Foto de fondo (opcional). Sin foto se usa el fondo técnico animado. */
   image?: string;
   title: string;
   subtitle: string;
@@ -36,6 +36,7 @@ const T = {
 };
 
 export function HeroSection({
+  image,
   title,
   subtitle,
   ctaText,
@@ -60,12 +61,26 @@ export function HeroSection({
 
   return (
     <section className="relative flex min-h-[88vh] items-center overflow-hidden bg-ink-gradient text-white">
-      <TechBackdrop />
-
-      {/* Floating decorative ring */}
-      <div className="pointer-events-none absolute -right-32 top-1/4 hidden lg:block">
-        <div className="animate-float-slow h-96 w-96 rounded-full border border-accent/20" />
-      </div>
+      {image ? (
+        <>
+          <img
+            src={image}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            {...{ fetchpriority: "high" }}
+          />
+          {/* Oscurece más el lado del texto; en celular, parejo, porque el texto ocupa todo el ancho */}
+          <div className="absolute inset-0 bg-ink/75 md:bg-transparent md:bg-gradient-to-r md:from-ink/95 md:via-ink/75 md:to-ink/25" />
+        </>
+      ) : (
+        <>
+          <TechBackdrop />
+          {/* Floating decorative ring */}
+          <div className="pointer-events-none absolute -right-32 top-1/4 hidden lg:block">
+            <div className="animate-float-slow h-96 w-96 rounded-full border border-accent/20" />
+          </div>
+        </>
+      )}
 
       <div className="container relative z-10 mx-auto px-4 pt-20">
         <motion.div
